@@ -465,7 +465,7 @@ df_product = load_local_data(FILE_DIM)
 
 # --- [重构] Sidebar: 数据字典 & 范围 ---
 with st.sidebar:
-    st.markdown("### 🗃️ 数据字典")
+    st.markdown("### 📰 数据字典")
     
     # 获取所有可用列名
     all_cols = set()
@@ -479,7 +479,7 @@ with st.sidebar:
         has_item = False
         for item in items:
             # 简单去重和清理
-            if item in all_cols or label in ["🏥 渠道范围", "📅 数据时间"]: 
+            if item in all_cols or label in ["⚙︎ 渠道范围", "⏱︎ 数据时间"]: 
                 extra_class = "highlight" if is_highlight else ""
                 html += f"<div class='field-chip {extra_class}'>{item}</div>"
                 has_item = True
