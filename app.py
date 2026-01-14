@@ -598,7 +598,7 @@ for msg in st.session_state.messages:
 
 # --- 猜你想问 (左对齐按钮) ---
 if not st.session_state.messages:
-    st.markdown("### 我们正在通过人工智能重塑数据，点亮医药行业，有什么要问我们？")
+    st.markdown("### 我们正在通过人工智能重塑医药数据，点亮医药行业，有什么要问我们？")
     st.markdown("###  ")
     c1, c2, c3 = st.columns(3)
     def handle_preset(question):
