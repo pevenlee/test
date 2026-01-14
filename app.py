@@ -774,8 +774,8 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                             # ==========================================
                             try:
                                 prompt_next = f"""
-                                基于上述查询结果和数据库字段有的字段："{user_query}"，
-                                给出两个客户最想深入挖掘的2个问题（中文）。
+                                基于生产的表格和洞察，结合数据库有的字段："{user_query}"，
+                                给出两个客户最想深入挖掘的2个问题。
                                 
                                 严格输出 JSON 字符串列表。
                                 示例格式: ["为什么2024年份额下降了?", "查看该产品的分医院排名"]
@@ -928,7 +928,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                         # === Follow-up questions ===
                         # [中文提示词] 追问生成
                         prompt_next = f"""
-                        基于上述查询结果和数据库有的字段，建议2个相关的追问问题。
+                        基于生产的表格和洞察，结合数据库有的字段。
                         仅输出一个 JSON 字符串列表。
                         示例格式: ["第一个问题是什么?", "第二个问题是什么?"]
                         """
