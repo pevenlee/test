@@ -41,7 +41,7 @@ try:
 except:
     FIXED_API_KEY = "" # 请确保这里有你的 API Key 或者通过 st.secrets 配置
 
-# ================= 2. 视觉体系 (Noir UI - 侧边栏下沉版) =================
+# ================= 2. 视觉体系 (Noir UI - 展开按钮修复版) =================
 
 def get_base64_image(image_path):
     """读取本地图片并转为 Base64"""
@@ -90,14 +90,14 @@ def inject_custom_css():
             background: #222 !important;
         }
 
-        /* === 布局核心修正 (Sidebar Below Header) === */
+        /* === 布局核心修正 === */
         
         /* 1. 顶部导航栏 (最高层级) */
         .fixed-header-container {
             position: fixed; top: 0; left: 0; width: 100%; height: var(--header-height);
             background-color: rgba(5,5,5,0.95);
             border-bottom: 1px solid var(--border-color);
-            z-index: 999999 !important; /* 确保在最顶层，覆盖侧边栏顶部 */
+            z-index: 999999 !important; /* 确保在最顶层 */
             display: flex; align-items: center; justify-content: space-between;
             padding: 0 100px 0 24px; 
         }
@@ -109,24 +109,34 @@ def inject_custom_css():
             z-index: 999998 !important; /* 层级略低于顶导 */
             background-color: #0A0A0A !important; 
             border-right: 1px solid #333;
-            padding-top: 20px !important; /* 恢复内部正常间距，不再需要巨大的padding避让 */
-            box-shadow: 2px 0 10px rgba(0,0,0,0.3); /* 加一点阴影增加层次感 */
+            padding-top: 20px !important; 
+            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
         }
         
-        /* 3. 展开按钮 (>) 位置修正 */
+        /* 3. 【关键修复】展开按钮 (Collapsed Control) */
+        /* 强制将其位置移动到顶导下方，并设置最高层级 */
         [data-testid="stSidebarCollapsedControl"] {
             position: fixed !important;
-            top: 70px !important; /* 60px + 10px，保持在顶导下方 */
+            top: 75px !important; /* 60px(顶导) + 15px(间距) -> 移到黑色区域下方 */
             left: 20px !important;
-            z-index: 999995 !important; 
+            z-index: 1000000 !important; /* 比顶导还要高，确保能点到 */
             background-color: transparent !important;
+            color: #E0E0E0 !important;
+            display: block !important; /* 强制显示 */
+            width: auto !important;
+            height: auto !important;
+        }
+        
+        /* 修复按钮内的图标颜色 */
+        [data-testid="stSidebarCollapsedControl"] svg {
+            fill: #E0E0E0 !important;
             color: #E0E0E0 !important;
         }
 
         /* 4. Streamlit 原生 Header (透明化并置顶，保证右上角菜单可点) */
         header[data-testid="stHeader"] { 
             background: transparent !important; 
-            z-index: 999999 !important; /* 与自定义顶导同级 */
+            z-index: 999999 !important; 
             height: var(--header-height) !important;
         }
         header[data-testid="stHeader"] > div:first-child {
