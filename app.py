@@ -605,13 +605,12 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                     6. **避免 'ambiguous' 错误**：如果 index name 与 column name 冲突，请在 reset_index() 前先使用 `df.index.name = None` 或重命名索引。
                     7. 结果必须赋值给变量 `result`。
                     
-
                     【关键指令】
                     1. **数据范围检查**: 查看上下文中的日期范围。最新的日期决定了“当前周期”。
                     2. **同口径对比 (Like-for-Like)**: 当分析跨年增长或趋势时，**必须**筛选前一年的数据以匹配当前年份的月份/季度范围 (YTD逻辑)。
                        - 例如: 如果最大日期是 2025-09-30，那么“2024年数据”用于对比时，只能取 2024-01-01 到 2024-09-30，而不是2024全年的数据。
                     3. 返回时间范围时，需要说明用的原始表中的哪个时间段 如问最近两年的同比，如果为了对齐数据，则返回格式为 2024Q1~Q3 & 2025Q1~Q3
-                
+                    
                     【摘要生成规则 (Summary)】
                     - scope (范围): 数据的筛选范围。
                     - metrics (指标): 用户查询的核心指标。
@@ -657,6 +656,57 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                             formatted_df = format_display_df(res_df)
                             st.dataframe(formatted_df, use_container_width=True)
                             st.session_state.messages.append({"role": "assistant", "type": "df", "content": formatted_df})
+
+                            # ==========================================
+                            # [新增功能 START] 1. Flash 快速总结表格
+                            # ==========================================
+                            try:
+                                prompt_summary = f"请用精炼的中文一句话总结以下数据的主要发现 (不使用Markdown格式):\n{formatted_df.to_string()}"
+                                resp_summary = safe_generate(client, MODEL_FAST, prompt_summary)
+                                summary_text = resp_summary.text.strip()
+                                
+                                # 显示并保存总结
+                                st.markdown(f'<div class="mini-insight">>> {summary_text}</div>', unsafe_allow_html=True)
+                                st.session_state.messages.append({"role": "assistant", "type": "text", "content": summary_text})
+                            except Exception as e:
+                                pass # 总结失败不影响数据展示
+
+                            # ==========================================
+                            # [新增功能 START] 2. Smart 模型生成追问
+                            # ==========================================
+                            try:
+                                prompt_next = f"""
+                                基于上述查询结果和用户历史问题："{user_query}"，
+                                预测用户下一步可能最想深入挖掘的2个问题（中文）。
+                                
+                                严格输出 JSON 字符串列表。
+                                示例格式: ["为什么2024年份额下降了?", "查看该产品的分医院排名"]
+                                """
+                                resp_next = safe_generate(client, MODEL_SMART, prompt_next, "application/json")
+                                next_questions = clean_json_string(resp_next.text)
+
+                                if isinstance(next_questions, list) and len(next_questions) > 0:
+                                    st.markdown("### 建议追问")
+                                    c1, c2 = st.columns(2)
+                                    
+                                    def get_q_text_safe(q):
+                                        if isinstance(q, str): return q
+                                        if isinstance(q, dict): return q.get('question', list(q.values())[0])
+                                        return str(q)
+
+                                    if len(next_questions) > 0: 
+                                        q1_text = get_q_text_safe(next_questions[0])
+                                        c1.button(f"> {q1_text}", use_container_width=True, on_click=handle_followup, args=(q1_text,))
+                                    if len(next_questions) > 1: 
+                                        q2_text = get_q_text_safe(next_questions[1])
+                                        c2.button(f"> {q2_text}", use_container_width=True, on_click=handle_followup, args=(q2_text,))
+                            except Exception as e:
+                                pass # 追问生成失败不报错
+                            
+                            # ==========================================
+                            # [新增功能 END]
+                            # ==========================================
+
                         else:
                             st.warning("尝试模糊搜索...")
                             fallback_code = f"result = df_product[df_product.astype(str).apply(lambda x: x.str.contains('{user_query[:2]}', case=False, na=False)).any(axis=1)].head(10)"
