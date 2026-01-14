@@ -501,7 +501,7 @@ st.markdown(f"""
 <div class="fixed-header-container">
     <div class="nav-left">
         <div class="nav-logo-icon">{logo_html}</div>
-        <div class="nav-logo-text">|ChatBI</div>
+        <div class="nav-logo-text">ChatBI</div>
     </div>
     <div class="nav-right">
         <div class="nav-tag">Peiwen</div>
@@ -565,7 +565,7 @@ for msg in st.session_state.messages:
 
 # --- 猜你想问 (左对齐按钮) ---
 if not st.session_state.messages:
-    st.markdown("### Pharmcube is revolutionizing the pharmaceutical industry with data & AI.")
+    st.markdown("### Illuminating the Pharmaceutical Industry Through AI")
     c1, c2, c3 = st.columns(3)
     def handle_preset(question):
         st.session_state.messages.append({"role": "user", "type": "text", "content": question})
