@@ -97,9 +97,12 @@ def inject_custom_css():
             position: fixed; top: 0; left: 0; width: 100%; height: var(--header-height);
             background-color: rgba(5,5,5,0.95);
             border-bottom: 1px solid var(--border-color);
-            z-index: 999999 !important; /* 确保在最顶层 */
+            z-index: 999999 !important; 
             display: flex; align-items: center; justify-content: space-between;
-            padding: 0 100px 0 24px; 
+            
+            /* --- CHANGE THIS LINE --- */
+            /* Old: padding: 0 100px 0 24px; */
+            padding: 0 24px; /* Changed right padding from 100px to 24px */
         }
 
         /* 2. 侧边栏容器 (下沉到顶导下方) */
