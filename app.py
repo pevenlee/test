@@ -24,14 +24,18 @@ st.set_page_config(
 )
 
 # --- 模型配置 ---
-MODEL_FAST = "gemini-2.0-flash"       
+MODEL_FAST = "gemini-2.0-flash"        
 MODEL_SMART = "gemini-3-pro-preview"      
 
 # --- 常量定义 ---
 JOIN_KEY = "药品索引"
 FILE_FACT = "fact.csv"      
 FILE_DIM = "ipmdata.xlsx"
-LOGO_FILE = "logo.png"    
+LOGO_FILE = "logo.png"
+
+# [新功能] 头像定义
+USER_AVATAR = "clt.png"  # 用户头像文件名
+BOT_AVATAR = "pmc.png"   # AI头像文件名
 
 try:
     FIXED_API_KEY = st.secrets["GENAI_API_KEY"]
@@ -133,6 +137,12 @@ def inject_custom_css():
         [data-testid="stChatMessageAvatarBackground"] svg {
             fill: #ffffff !important; stroke: #ffffff !important;
         }
+        /* 头像图片适配 */
+        .stChatMessage .stChatMessageAvatarImage {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
         
         .msg-prefix { font-weight: bold; margin-right: 8px; font-size: 12px; }
         .p-user { color: #888; }
@@ -142,7 +152,7 @@ def inject_custom_css():
         [data-testid="stBottom"] { background: transparent !important; border-top: 1px solid var(--border-color); }
         .stChatInputContainer textarea { background: #050505 !important; color: #fff !important; border: 1px solid #333 !important; }
         
-        /* === 思考过程展示区 (Thinking Box) === */
+        /* === 思考过程展示区 (Thinking Box) - [修改] 左对齐 === */
         .thought-box {
             font-family: 'JetBrains Mono', "Microsoft YaHei", monospace;
             font-size: 12px;
@@ -150,6 +160,7 @@ def inject_custom_css():
             border-left: 2px solid #444;
             padding-left: 10px;
             margin-bottom: 10px;
+            text-align: left !important;
         }
         .thought-header { font-weight: bold; color: #AAA; margin-bottom: 4px; display: block; }
         
@@ -167,13 +178,27 @@ def inject_custom_css():
             color: #CCC !important;
         }
 
-        /* 协议卡片 */
-        .protocol-box { background: #0A0A0A; padding: 12px; border: 1px solid #222; margin-bottom: 15px; font-size: 12px; }
+        /* 协议卡片 - [修改] 左对齐 */
+        .protocol-box { 
+            background: #0A0A0A; 
+            padding: 12px; 
+            border: 1px solid #222; 
+            margin-bottom: 15px; 
+            font-size: 12px; 
+            text-align: left !important;
+        }
         .protocol-row { display: flex; justify-content: space-between; border-bottom: 1px dashed #222; padding: 4px 0; }
         .protocol-key { color: #555; } .protocol-val { color: #CCC; }
         
-        /* 洞察框 */
-        .insight-box { background: #0A0A0A; padding: 15px; border-left: 3px solid #FFF; color: #DDD; margin-top: 10px; }
+        /* 洞察框 - [修改] 左对齐 */
+        .insight-box { 
+            background: #0A0A0A; 
+            padding: 15px; 
+            border-left: 3px solid #FFF; 
+            color: #DDD; 
+            margin-top: 10px; 
+            text-align: left !important;
+        }
         .mini-insight { color: #666; font-size: 12px; font-style: italic; border-top: 1px solid #222; margin-top: 8px; padding-top: 4px; }
         </style>
     """, unsafe_allow_html=True)
@@ -235,9 +260,25 @@ def clean_json_string(text):
     return None
 
 def safe_generate(client, model, prompt, mime_type="text/plain"):
+    """普通生成（同步）"""
     config = types.GenerateContentConfig(response_mime_type=mime_type)
     try: return client.models.generate_content(model=model, contents=prompt, config=config)
     except Exception as e: return type('obj', (object,), {'text': f"Error: {e}"})
+
+def stream_generate(client, model, prompt):
+    """[新功能] 流式生成内容，用于 st.write_stream 实现打字机效果"""
+    try:
+        response = client.models.generate_content(
+            model=model, 
+            contents=prompt, 
+            config=types.GenerateContentConfig(response_mime_type="text/plain"),
+            stream=True
+        )
+        for chunk in response:
+            if chunk.text:
+                yield chunk.text
+    except Exception as e:
+        yield f"Stream Error: {e}"
 
 def format_display_df(df):
     if not isinstance(df, pd.DataFrame): return df
@@ -305,6 +346,14 @@ def safe_exec_code(code_str, context):
         if candidates: return candidates[-1]
         return None
     except Exception as e: raise e
+
+# [新功能] 获取头像工具函数
+def get_avatar(role):
+    """根据角色获取头像，如果图片存在则返回路径，否则返回None"""
+    if role == "user":
+        return USER_AVATAR if os.path.exists(USER_AVATAR) else None
+    else:
+        return BOT_AVATAR if os.path.exists(BOT_AVATAR) else None
 
 # ================= 4. 页面渲染 =================
 
@@ -374,9 +423,12 @@ with st.sidebar:
     
     st.markdown("<div style='height: 50px;'></div>", unsafe_allow_html=True)
 
-# --- Chat History ---
+# --- Chat History (修改：应用自定义头像) ---
 for msg in st.session_state.messages:
-    with st.chat_message(msg["role"], avatar=None):
+    # 动态获取头像
+    avatar_file = get_avatar(msg["role"])
+    
+    with st.chat_message(msg["role"], avatar=avatar_file):
         if msg["type"] == "text": 
             role_class = "p-ai" if msg["role"] == "assistant" else "p-user"
             prefix = "系统 > " if msg["role"] == "assistant" else "用户 > "
@@ -410,7 +462,8 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
         user_query = st.session_state.messages[-1]["content"]
         history_str = get_history_context(limit=5)
 
-        with st.chat_message("assistant", avatar=None):
+        # 修改：使用 AI 头像
+        with st.chat_message("assistant", avatar=get_avatar("assistant")):
             if df_sales is None or df_product is None:
                 err_text = f"数据源缺失。请检查侧边栏路径诊断。 (需要文件: {FILE_FACT}, {FILE_DIM})"
                 st.markdown(f'<div class="custom-error">{err_text}</div>', unsafe_allow_html=True)
@@ -423,11 +476,10 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
             KEY: `{JOIN_KEY}`
             """
 
-            # ================= 1. 意图识别 (优化版) =================
-            intent = "inquiry" # 默认值，防止报错
+            # ================= 1. 意图识别 =================
+            intent = "inquiry"
             
             with st.status("正在分析意图...", expanded=False) as status:
-                # 修改 Prompt，让选项更明确，防止模型直接照抄 "inquiry/analysis"
                 prompt_router = f"""
                 Classify intent of the query based on context.
                 History: {history_str}
@@ -448,7 +500,6 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                     status.update(label="API 连接错误", state="error")
                     st.stop()
                 
-                # 获取结果并进行清洗（关键步骤：转小写、去空格）
                 cleaned_data = clean_json_string(resp.text)
                 if cleaned_data:
                     raw_intent = cleaned_data.get('type', 'inquiry')
@@ -460,11 +511,8 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
 
             # ================= 逻辑分流 =================
             
-            # 2. 简单查询 (包含 inquiry 和默认情况)
+            # 2. 简单查询
             if 'analysis' not in intent and 'irrelevant' not in intent:
-                # 这里使用 'analysis' not in intent 作为条件，意味着只要不是明确的分析，都尝试查询
-                # 这样比 if intent == 'inquiry' 更健壮
-                
                 with st.spinner("正在生成查询代码..."):
                     prompt_code = f"""
                     Role: Python Data Expert.
@@ -479,7 +527,6 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                     plan = clean_json_string(resp_code.text)
                 
                 if plan:
-                    # >>> 打印思考过程
                     with st.expander("> 查看思考过程 (THOUGHT PROCESS)", expanded=False):
                         st.markdown(f"""
                         <div class="thought-box">
@@ -489,7 +536,6 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                         """, unsafe_allow_html=True)
                         st.markdown("**生成代码:**")
                         st.code(plan.get('code'), language='python')
-                    # <<<
 
                     render_protocol_card(plan.get('summary', {}))
                     try:
@@ -503,7 +549,6 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                             st.session_state.messages.append({"role": "assistant", "type": "df", "content": formatted_df})
                         else:
                             st.warning("无精确匹配，尝试模糊搜索...")
-                            # 简单的模糊搜索回退策略
                             fallback_code = f"result = df_product[df_product.astype(str).apply(lambda x: x.str.contains('{user_query[:2]}', case=False, na=False)).any(axis=1)].head(10)"
                             try:
                                 res_fallback = safe_exec_code(fallback_code, exec_ctx)
@@ -516,7 +561,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                     except Exception as e:
                         st.markdown(f'<div class="custom-error">代码执行错误: {e}</div>', unsafe_allow_html=True)
 
-            # 3. 深度分析
+            # 3. 深度分析 (修改：流式输出)
             elif 'analysis' in intent:
                 shared_ctx = {"df_sales": df_sales.copy(), "df_product": df_product.copy()}
 
@@ -536,10 +581,8 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                 if plan_json:
                     intro = f"**分析思路:**\n{plan_json.get('intent_analysis')}"
                     
-                    # >>> 打印思考过程
                     with st.expander("> 查看分析思路 (ANALYSIS THOUGHT)", expanded=True):
                         st.markdown(intro)
-                    # <<<
                     
                     st.session_state.messages.append({"role": "assistant", "type": "text", "content": intro})
                     
@@ -568,16 +611,21 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                                 st.error(f"分析错误: {e}")
 
                     if angles_data:
-                        with st.spinner("正在生成总结..."):
-                            findings = "\n".join([f"[{a['title']}]: {a['explanation']}" for a in angles_data])
-                            prompt_final = f"""Based on findings: {findings}, answer: "{user_query}". Response in Chinese (中文). Professional tone."""
-                            resp_final = safe_generate(client, MODEL_SMART, prompt_final)
-                            insight = resp_final.text
-                            st.markdown(f'<div class="insight-box">{insight}</div>', unsafe_allow_html=True)
-                            st.session_state.messages.append({"role": "assistant", "type": "text", "content": f"### 分析总结\n{insight}"})
+                        # [新功能] 流式输出总结
+                        st.markdown("### 分析总结")
+                        
+                        findings = "\n".join([f"[{a['title']}]: {a['explanation']}" for a in angles_data])
+                        prompt_final = f"""Based on findings: {findings}, answer: "{user_query}". Response in Chinese (中文). Professional tone."""
+                        
+                        # 调用流式生成器并展示打字机效果
+                        stream_gen = stream_generate(client, MODEL_SMART, prompt_final)
+                        final_response = st.write_stream(stream_gen)
+                        
+                        # 记录完整回复
+                        st.session_state.messages.append({"role": "assistant", "type": "text", "content": f"### 分析总结\n{final_response}"})
 
                         # Follow-up questions
-                        prompt_next = f"Suggest 2 follow-up questions in Chinese based on {insight}. Output JSON List."
+                        prompt_next = f"Suggest 2 follow-up questions in Chinese based on {final_response}. Output JSON List."
                         resp_next = safe_generate(client, MODEL_FAST, prompt_next, "application/json")
                         next_questions = clean_json_string(resp_next.text)
 
@@ -588,11 +636,14 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                             if len(next_questions) > 1: c2.button(f"> {next_questions[1]}", use_container_width=True, on_click=handle_followup, args=(next_questions[1],))
             
             elif 'irrelevant' in intent:
-                st.info("该问题似乎与医药数据无关，我是 ChatBI，专注于医药市场分析。")
-                st.session_state.messages.append({"role": "assistant", "type": "text", "content": "该问题与数据无关。"})
+                msg = "该问题似乎与医药数据无关，我是 ChatBI，专注于医药市场分析。"
+                def simple_stream():
+                    for word in msg:
+                        yield word
+                        time.sleep(0.02)
+                st.write_stream(simple_stream)
+                st.session_state.messages.append({"role": "assistant", "type": "text", "content": msg})
 
     except Exception as e:
         import traceback
         st.markdown(f'<div class="custom-error">系统异常: {str(e)}</div>', unsafe_allow_html=True)
-        # 调试模式下可以打印堆栈
-        # st.code(traceback.format_exc())
