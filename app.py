@@ -41,7 +41,7 @@ try:
 except:
     FIXED_API_KEY = "" # 请确保这里有你的 API Key 或者通过 st.secrets 配置
 
-# ================= 2. 视觉体系 (Noir UI - 展开按钮修复版) =================
+# ================= 2. 视觉体系 (Noir UI - 侧边栏升级版) =================
 
 def get_base64_image(image_path):
     """读取本地图片并转为 Base64"""
@@ -113,27 +113,23 @@ def inject_custom_css():
             box-shadow: 2px 0 10px rgba(0,0,0,0.3);
         }
         
-        /* 3. 【关键修复】展开按钮 (Collapsed Control) */
-        /* 强制将其位置移动到顶导下方，并设置最高层级 */
+        /* 3. 展开按钮 (Collapsed Control) 位置修正 */
         [data-testid="stSidebarCollapsedControl"] {
             position: fixed !important;
-            top: 75px !important; /* 60px(顶导) + 15px(间距) -> 移到黑色区域下方 */
+            top: 75px !important; /* 60px(顶导) + 15px(间距) */
             left: 20px !important;
             z-index: 1000000 !important; /* 比顶导还要高，确保能点到 */
             background-color: transparent !important;
             color: #E0E0E0 !important;
-            display: block !important; /* 强制显示 */
-            width: auto !important;
-            height: auto !important;
+            display: block !important; 
         }
         
-        /* 修复按钮内的图标颜色 */
         [data-testid="stSidebarCollapsedControl"] svg {
             fill: #E0E0E0 !important;
             color: #E0E0E0 !important;
         }
 
-        /* 4. Streamlit 原生 Header (透明化并置顶，保证右上角菜单可点) */
+        /* 4. Streamlit 原生 Header (透明化并置顶) */
         header[data-testid="stHeader"] { 
             background: transparent !important; 
             z-index: 999999 !important; 
@@ -141,6 +137,47 @@ def inject_custom_css():
         }
         header[data-testid="stHeader"] > div:first-child {
             background: transparent !important;
+        }
+        
+        /* === 5. [新增] 侧边栏数据字典样式 (Chips) === */
+        .dict-category {
+            font-size: 13px;
+            font-weight: 700;
+            color: #888;
+            margin-top: 20px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .chip-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+        
+        .field-chip {
+            display: inline-flex;
+            align-items: center;
+            background-color: #1A1A1A;
+            border: 1px solid #333;
+            border-radius: 6px; /* 圆角矩阵 */
+            padding: 4px 8px;
+            font-size: 11px;
+            color: #CCC;
+            font-family: 'JetBrains Mono', monospace;
+            transition: all 0.2s;
+        }
+        .field-chip:hover {
+            border-color: #555;
+            color: #FFF;
+            background-color: #222;
+        }
+        .field-chip.highlight {
+            border-color: #444;
+            background-color: #181818;
+            color: #4CAF50; /* 绿色高亮 */
         }
         
         /* --- 其他样式 --- */
@@ -426,27 +463,96 @@ client = get_client()
 df_sales = load_local_data(FILE_FACT)
 df_product = load_local_data(FILE_DIM)
 
-# --- [新增] Sidebar: 数据字典 ---
+# --- [重构] Sidebar: 数据字典 & 范围 ---
 with st.sidebar:
     st.markdown("### 🗃️ 数据字典")
-    st.markdown("以下为当前已加载的数据字段：")
     
-    if df_sales is not None:
-        with st.expander("📊 销售事实表 (Fact)", expanded=True):
-            for col in df_sales.columns:
-                st.markdown(f"- <span style='color:#AAA'>{col}</span>", unsafe_allow_html=True)
-    else:
-        st.warning(f"缺失: {FILE_FACT}")
+    # 获取所有可用列名
+    all_cols = set()
+    if df_sales is not None: all_cols.update(df_sales.columns)
+    if df_product is not None: all_cols.update(df_product.columns)
+    
+    def render_chips(label, items, is_highlight=False):
+        """渲染分类和圆角矩阵标签"""
+        st.markdown(f"<div class='dict-category'>{label}</div>", unsafe_allow_html=True)
+        html = "<div class='chip-container'>"
+        has_item = False
+        for item in items:
+            # 简单去重和清理
+            if item in all_cols or label in ["🏥 渠道范围", "📅 数据时间"]: 
+                extra_class = "highlight" if is_highlight else ""
+                html += f"<div class='field-chip {extra_class}'>{item}</div>"
+                has_item = True
+        html += "</div>"
+        if has_item:
+            st.markdown(html, unsafe_allow_html=True)
+        else:
+            st.markdown(f"<span style='font-size:11px; color:#555;'>暂无字段</span>", unsafe_allow_html=True)
 
-    if df_product is not None:
-        with st.expander("🏷️ 产品维度表 (Dim)", expanded=False):
-            for col in df_product.columns:
-                st.markdown(f"- <span style='color:#AAA'>{col}</span>", unsafe_allow_html=True)
+    # 1. 产品信息
+    product_fields = [
+        "通用名", "商品名", "药品名称", "成分名", "生产企业", "集团名称", 
+        "规格", "剂型", "ATC1Des", "ATC2Des", "ATC3Des", "ATC4Des",
+        "药品分类", "药品分类二", "OTC", "零售分类1 描述", "零售分类2 描述", "零售分类3 描述",
+        "研究类型", "企业类型"
+    ]
+    render_chips("🛒 产品信息", product_fields)
+
+    # 2. 政策标签
+    policy_fields = ["医保", "最早医保纳入年份", "集采批次", "集采结果", "一致性评价", "首次上市年代"]
+    render_chips("📜 政策标签", policy_fields)
+
+    # 3. 指标类型
+    metric_fields = ["销售额", "销售量"]
+    render_chips("📈 指标类型", metric_fields)
+
+    # 4. 渠道
+    # 尝试从数据中获取渠道值，如果不行则显示字段名
+    channel_items = []
+    if df_sales is not None and "渠道" in df_sales.columns:
+        try:
+            unique_channels = df_sales["渠道"].dropna().unique().tolist()
+            if len(unique_channels) < 10: # 如果渠道数量少，显示具体值
+                channel_items = unique_channels
+            else:
+                channel_items = ["渠道"]
+        except:
+            channel_items = ["渠道"]
     else:
-        st.warning(f"缺失: {FILE_DIM}")
+        channel_items = ["渠道"]
+    
+    render_chips("🏥 渠道范围", channel_items)
+
+    # 5. 时间
+    time_range_str = "未加载"
+    if df_sales is not None:
+        # 尝试寻找时间列
+        time_col = None
+        for c in df_sales.columns:
+            if "年季" in c or "date" in c.lower() or "time" in c.lower():
+                time_col = c
+                break
+        
+        if time_col:
+            try:
+                # 假设是 YearQuarter 格式 (e.g. 20211 or 2021Q1)
+                min_val = df_sales[time_col].min()
+                max_val = df_sales[time_col].max()
+                
+                def fmt_q(val):
+                    s = str(val)
+                    if "Q" in s: return s
+                    if len(s) == 5: return f"{s[:4]}Q{s[-1]}" # 20211 -> 2021Q1
+                    return s
+                
+                time_range_str = f"{fmt_q(min_val)} ~ {fmt_q(max_val)}"
+            except:
+                time_range_str = "格式解析失败"
+    
+    render_chips("📅 数据时间", [time_range_str], is_highlight=True)
 
     st.markdown("---")
-    st.markdown(f"<div style='font-size:10px; color:#666;'>Model: {MODEL_SMART}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='font-size:10px; color:#666; text-align:center;'>Powered by {MODEL_SMART}</div>", unsafe_allow_html=True)
 
 # --- Top Nav ---
 logo_b64 = get_base64_image(LOGO_FILE)
