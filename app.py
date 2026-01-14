@@ -42,7 +42,7 @@ try:
 except:
     FIXED_API_KEY = "" # 请确保这里有你的 API Key 或者通过 st.secrets 配置
 
-# ================= 2. 视觉体系 (Noir UI - 强力修复版) =================
+# ================= 2. 视觉体系 (Noir UI - 简洁稳定版) =================
 
 def get_base64_image(image_path):
     """读取本地图片并转为 Base64"""
@@ -74,11 +74,11 @@ def inject_custom_css():
         /* 全局圆角设置 */
         div, input, select, textarea { border-radius: var(--radius-md) !important; }
         
-        /* 按钮样式：左对齐 + 圆角 */
+        /* 按钮样式 */
         .stButton button {
             border-radius: var(--radius-md) !important;
             text-align: left !important;
-            justify-content: flex-start !important; /* 强制内容左对齐 */
+            justify-content: flex-start !important;
             padding-left: 15px !important;
             border: 1px solid #333 !important;
             background: #111 !important;
@@ -90,19 +90,13 @@ def inject_custom_css():
             color: #FFF !important;
             background: #222 !important;
         }
-        .stButton button p {
-            text-align: left !important; /* 再次强制内部文字左对齐 */
-            font-size: 13px !important;
-        }
 
         /* === 顶部导航栏 === */
         header[data-testid="stHeader"] { 
             background: transparent !important; 
             z-index: 10 !important;
-            /* 移除 pointer-events: none 以防止某些交互被阻断 */
         }
-        header[data-testid="stHeader"] > div:first-child { background: transparent; }
-
+        
         .fixed-header-container {
             position: fixed; top: 0; left: 0; width: 100%; height: 60px;
             background-color: rgba(0,0,0,0.95);
@@ -116,7 +110,6 @@ def inject_custom_css():
         .nav-logo-img { height: 28px; width: auto; }
         .nav-logo-text { font-weight: 700; font-size: 18px; color: #FFF; letter-spacing: -0.5px; }
         
-        /* 右上角头像容器 */
         .nav-right { display: flex; align-items: center; gap: 12px; }
         .user-avatar-circle {
             width: 36px; height: 36px;
@@ -131,152 +124,46 @@ def inject_custom_css():
         .block-container { padding-top: 80px !important; max-width: 1200px; }
         footer { display: none !important; }
 
-        /* === 侧边栏控制按钮 (强力修复版) - 已修改为垂直居中 === */
-        
-        /* 1. [关键] 展开按钮 (当侧边栏收起时显示) */
-        [data-testid="stSidebarCollapsedControl"], 
-        div[data-testid="stSidebarCollapsedControl"],
-        button[data-testid="stSidebarCollapsedControl"] {
-            display: flex !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            
-            /* --- 位置调整核心代码 START --- */
-            position: fixed !important;
-            left: 12px !important;        /* 稍微靠左一些，贴合边缘 */
-            top: 50% !important;          /* 垂直位置设为 50% */
-            bottom: auto !important;      /* 移除底部的定位 */
-            right: auto !important;
-            
-            /* 向上偏移自身高度的 50%，实现完美垂直居中 */
-            transform: translateY(-50%) !important; 
-            /* --- 位置调整核心代码 END --- */
-            
-            /* 层级：必须极高 */
-            z-index: 2147483647 !important; 
-            
-            /* 样式 */
-            background-color: #111 !important;
-            color: #fff !important;
-            border: 2px solid #666 !important;
-            border-radius: 50% !important;
-            width: 44px !important;
-            height: 44px !important;
-            
-            /* 阴影 */
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
-            
-            /* 交互 */
-            pointer-events: auto !important;
-            cursor: pointer !important;
-            transition: all 0.3s ease !important;
-        }
-
-        /* hover 效果 - 注意：必须保留 translateY(-50%) 否则悬停时位置会跳动 */
-        [data-testid="stSidebarCollapsedControl"]:hover {
-            background-color: #333 !important;
-            /* 保持居中的同时进行缩放 */
-            transform: translateY(-50%) scale(1.1) !important; 
-            border-color: #FFF !important;
-        }
-
-        /* 2. 关闭按钮 (当侧边栏展开时显示，位于侧边栏内部) */
-        section[data-testid="stSidebar"] button[kind="header"] {
-            display: flex !important; /* 确保内容居中 */
-            align-items: center !important;
-            justify-content: center !important;
-            
-            /* --- 位置调整核心代码 START --- */
-            position: fixed !important; /* 使用 fixed 确保它相对于屏幕视口定位，不随侧边栏内容滚动 */
-            top: 50% !important;
-            bottom: auto !important;
-            
-            /* 水平位置：靠侧边栏的右边缘 */
-            /* Streamlit 侧边栏宽度通常固定，但这会让它贴着侧边栏内容的右侧 */
-            left: 300px !important; /* 这里需要根据侧边栏实际宽度微调，或者使用 right 配合 sidebar 上下文 */
-            /* 更稳妥的做法是覆盖默认样式，Streamlit 默认是在 header 里 */
-            /* 如果 position fixed 不好控制 left，我们可以改回 absolute */
-            /* 修正方案：使用 absolute 相对于侧边栏容器定位 */
-            position: absolute !important; 
-            right: 12px !important;      /* 距离侧边栏右边缘 12px */
-            left: auto !important;
-            /* --- 位置调整核心代码 END --- */
-
-            /* 垂直居中修正 */
-            transform: translateY(-50%) !important;
-            
-            z-index: 999999 !important;
-            
-            /* 样式美化 */
-            background-color: #222 !important;
-            color: #fff !important;
-            border: 1px solid #444 !important;
-            border-radius: 50% !important; /* 改成圆形，视觉更统一 */
-            width: 36px !important;
-            height: 36px !important;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
-            transition: all 0.2s ease !important;
-        }
-
-        /* 悬停效果 - 同样需要保持 translateY(-50%) */
-        section[data-testid="stSidebar"] button[kind="header"]:hover {
-            background-color: #444 !important;
-            color: #FFF !important;
-            border-color: #FFF !important;
-            transform: translateY(-50%) scale(1.1) !important;
-        }
-
-        /* === 错误提示美化 === */
-        .stAlert { display: none; }
-        .custom-error {
-            background-color: rgba(40, 0, 0, 0.9); border: 1px solid var(--accent-error); color: #ffcccc;
-            padding: 15px; font-size: 13px; margin-bottom: 1rem; display: flex; align-items: center; gap: 10px;
-            border-radius: var(--radius-md);
-        }
-        .custom-error::before { content: "[错误]"; color: var(--accent-error); font-weight: bold; }
-
-        /* === 侧边栏 & 表格 (强力置顶修复版) === */
+        /* === 侧边栏美化 (回归原生布局，去除强制 fixed 导致的遮挡) === */
         section[data-testid="stSidebar"] {
-            /* 1. 强制固定定位 */
-            position: fixed !important;
-            
-            /* 2. 避开顶部导航栏 (你的 Header 高度是 60px) */
-            top: 60px !important;
-            
-            /* 3. 紧贴左侧和底部 */
-            left: 0 !important;
-            bottom: 0 !important;
-            
-            /* 4. 高度计算 */
-            height: calc(100vh - 60px) !important;
-            
-            /* 5. [关键] 提升层级：必须比主内容区更高 */
-            /* Streamlit 默认内容的 z-index 较低，设为 1000 即可覆盖大部分内容 */
-            z-index: 1000 !important; 
-            
-            /* 6. 视觉样式 */
-            background-color: #000000 !important; /* 确保背景不透明 */
+            background-color: #000000 !important;
             border-right: 1px solid #333 !important;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.5) !important; /* 添加阴影增加层次感 */
-            
-            /* 7. 允许内部滚动 */
-            overflow-y: auto !important;
-            padding-top: 1rem !important;
-        }
-
-        /* 修复侧边栏内部容器，防止底部内容被截断 */
-        section[data-testid="stSidebar"] > div {
-            padding-bottom: 100px !important;
-        }
-
-        /* [双重保险] 确保侧边栏展开按钮也能被看见 */
-        [data-testid="stSidebarCollapsedControl"] {
-            z-index: 1002 !important; /* 比侧边栏再高一级 */
-            left: 10px !important;
-            top: 70px !important; /* 稍微往下挪一点，避开 Header */
+            box-shadow: 2px 0 10px rgba(0,0,0,0.5) !important;
         }
         
-        [data-testid="stDataFrame"] { background-color: #000 !important; border: 1px solid #333; border-radius: var(--radius-md); }
+        /* 侧边栏标题样式 */
+        section[data-testid="stSidebar"] h3 {
+            color: #888 !important;
+            font-size: 12px !important;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+
+        /* 侧边栏数据卡片样式 */
+        .sidebar-card {
+            background: #111;
+            border: 1px solid #222;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        .sidebar-label { color: #555; font-size: 11px; display: block; margin-bottom: 2px; }
+        .sidebar-value { color: #DDD; font-weight: bold; font-family: 'JetBrains Mono', monospace; }
+
+        /* 字段 Tag 样式 */
+        .field-tag {
+            display: inline-block;
+            background: #1A1A1A;
+            color: #999;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin: 2px;
+            border: 1px solid #333;
+        }
 
         /* === 聊天气泡 & 头像 === */
         [data-testid="stChatMessage"] { background: transparent !important; border: none !important; padding: 10px 0 !important; }
@@ -290,7 +177,7 @@ def inject_custom_css():
         }
         .stChatMessage .stChatMessageAvatarImage {
             width: 100%; height: 100%; object-fit: cover;
-            border-radius: 50%; /* 头像强制圆形 */
+            border-radius: 50%;
         }
         
         .msg-prefix { font-weight: bold; margin-right: 8px; font-size: 12px; }
@@ -310,13 +197,12 @@ def inject_custom_css():
             font-family: 'JetBrains Mono', "Microsoft YaHei", monospace;
             font-size: 12px; color: #888;
             border-left: 2px solid #444;
-            background: #080808; /* 轻微背景色以突显圆角 */
+            background: #080808;
             padding: 10px;
             margin-bottom: 10px;
             text-align: left !important;
             border-radius: 0 var(--radius-md) var(--radius-md) 0;
         }
-        .thought-header { font-weight: bold; color: #AAA; margin-bottom: 4px; display: block; }
         
         /* Streamlit Expander */
         .streamlit-expanderHeader {
@@ -330,7 +216,7 @@ def inject_custom_css():
             border-radius: 0 0 var(--radius-md) var(--radius-md) !important;
         }
 
-        /* 协议卡片 (四要素版) */
+        /* 协议卡片 */
         .protocol-box { 
             background: #0F0F0F; padding: 12px; border: 1px solid #333; 
             margin-bottom: 15px; font-size: 12px; 
@@ -349,6 +235,13 @@ def inject_custom_css():
             border-radius: 0 var(--radius-md) var(--radius-md) 0; 
         }
         .mini-insight { color: #666; font-size: 12px; font-style: italic; border-top: 1px solid #222; margin-top: 8px; padding-top: 4px; }
+        
+        /* 错误提示 */
+        .custom-error {
+            background-color: rgba(40, 0, 0, 0.9); border: 1px solid var(--accent-error); color: #ffcccc;
+            padding: 15px; font-size: 13px; margin-bottom: 1rem; display: flex; align-items: center; gap: 10px;
+            border-radius: var(--radius-md);
+        }
         </style>
     """, unsafe_allow_html=True)
 
@@ -388,22 +281,66 @@ def load_local_data(filename):
         return df
     return None
 
+def analyze_sidebar_data(df_sales, df_product):
+    """侧边栏数据分析辅助函数：计算时间范围和字段归类"""
+    info = {
+        "time_range": "未知",
+        "product_cols": [],
+        "class_cols": [],
+        "policy_cols": []
+    }
+    
+    # 1. 计算时间范围 (格式 2021Q1~2025Q3)
+    if df_sales is not None:
+        try:
+            # 寻找年份和季度列
+            year_col = next((c for c in df_sales.columns if 'year' in c.lower() or '年' in c), None)
+            q_col = next((c for c in df_sales.columns if 'quarter' in c.lower() or '季' in c or c.lower() == 'q'), None)
+            
+            if year_col:
+                years = sorted([int(y) for y in df_sales[year_col].dropna().unique()])
+                if years:
+                    min_year, max_year = years[0], years[-1]
+                    min_q, max_q = "", ""
+                    
+                    if q_col:
+                        # 尝试获取最小年的最小季 和 最大年的最大季
+                        try:
+                            min_q_val = df_sales[df_sales[year_col] == min_year][q_col].min()
+                            max_q_val = df_sales[df_sales[year_col] == max_year][q_col].max()
+                            if pd.notnull(min_q_val): min_q = f"Q{int(min_q_val)}"
+                            if pd.notnull(max_q_val): max_q = f"Q{int(max_q_val)}"
+                        except: pass
+                    
+                    info["time_range"] = f"{min_year}{min_q} ~ {max_year}{max_q}"
+        except:
+            pass
+
+    # 2. 字段分类
+    if df_product is not None:
+        cols = df_product.columns.tolist()
+        for c in cols:
+            cl = c.lower()
+            # 简单的关键词归类规则
+            if any(k in cl for k in ['集采', '医保', '基药', 'vbp', 'nrdl', '一致性', 'policy']):
+                info["policy_cols"].append(c)
+            elif any(k in cl for k in ['atc', '类', '科室', '领域', 'class', 'thera', 'area', 'group']):
+                info["class_cols"].append(c)
+            # 排除掉ID类，剩下的认为是产品属性
+            elif 'id' not in cl and 'index' not in cl: 
+                info["product_cols"].append(c)
+                
+    return info
+
 def get_dataframe_info(df, name="df"):
-    """
-    获取数据表信息，特别是增强了对日期范围的识别，
-    帮助 AI 了解数据的起始和结束时间。
-    """
     if df is None: return f"{name}: NULL"
     info = [f"表名: `{name}` ({len(df)} 行)"]
     info.append("| 字段 | 类型 | 范围/示例 |")
     info.append("|---|---|---|")
     for col in df.columns:
         dtype = str(df[col].dtype)
-        
-        # 特殊处理：如果是日期列，提取起止时间
         if pd.api.types.is_datetime64_any_dtype(df[col]) or "date" in str(col).lower() or "日期" in str(col):
             try:
-                # 尝试转为 datetime 以防万一
                 temp_col = pd.to_datetime(df[col], errors='coerce')
                 min_date = temp_col.min()
                 max_date = temp_col.max()
@@ -426,7 +363,6 @@ def clean_json_string(text):
         if match:
             try: return json.loads(match.group(0))
             except: pass
-        # 尝试修复列表
         match_list = re.search(r'\[.*\]', text, re.DOTALL)
         if match_list:
              try: return json.loads(match_list.group(0))
@@ -434,13 +370,11 @@ def clean_json_string(text):
     return None
 
 def safe_generate(client, model, prompt, mime_type="text/plain"):
-    """普通生成（同步）"""
     config = types.GenerateContentConfig(response_mime_type=mime_type)
     try: return client.models.generate_content(model=model, contents=prompt, config=config)
     except Exception as e: return type('obj', (object,), {'text': f"Error: {e}"})
 
 def stream_generate(client, model, prompt):
-    """流式生成内容，用于 st.write_stream 实现打字机效果"""
     try:
         response = client.models.generate_content_stream(
             model=model, 
@@ -454,7 +388,6 @@ def stream_generate(client, model, prompt):
         yield f"Stream Error: {e}"
 
 def simulated_stream(text, speed=0.01):
-    """模拟打字效果生成器，用于将静态文本转为流式"""
     for word in text:
         yield word
         time.sleep(speed)
@@ -497,11 +430,7 @@ def get_history_context(limit=5):
         context_str += f"{role}: {content}\n"
     return context_str
 
-# === 支持四要素展示的协议卡片 ===
 def render_protocol_card(summary):
-    """
-    展示四要素：意图识别、产品/时间范围、计算指标、计算逻辑
-    """
     intent = summary.get('intent', '-')
     scope = summary.get('scope', '-')
     metrics = summary.get('metrics', '-')
@@ -537,7 +466,6 @@ def safe_exec_code(code_str, context):
     except Exception as e: raise e
 
 def get_avatar(role):
-    """根据角色获取头像，如果图片存在则返回路径，否则返回None"""
     if role == "user":
         return USER_AVATAR if os.path.exists(USER_AVATAR) else None
     else:
@@ -551,14 +479,13 @@ client = get_client()
 df_sales = load_local_data(FILE_FACT)
 df_product = load_local_data(FILE_DIM)
 
-# --- Top Nav (修改：右上角改为头像) ---
+# --- Top Nav ---
 logo_b64 = get_base64_image(LOGO_FILE)
 if logo_b64:
     logo_html = f'<img src="data:image/png;base64,{logo_b64}" class="nav-logo-img">'
 else:
     logo_html = """<svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M12 2L2 22h20L12 2zm0 3.5L19 20H5l7-14.5z"/></svg>"""
 
-# 处理右上角用户头像
 user_avatar_b64 = get_base64_image(USER_AVATAR)
 if user_avatar_b64:
     user_avatar_html = f'<div class="user-avatar-circle"><img src="data:image/png;base64,{user_avatar_b64}"></div>'
@@ -580,36 +507,78 @@ st.markdown(f"""
 
 if "messages" not in st.session_state: st.session_state.messages = []
 
-# --- Sidebar ---
+# --- Sidebar (重构版) ---
+sidebar_info = analyze_sidebar_data(df_sales, df_product)
+
 with st.sidebar:
-    st.markdown("### 系统状态 SYSTEM STATUS")
+    # 1. 数据资产卡片
+    st.markdown("### 数据资产 DATA ASSETS")
     
-    if df_sales is not None:
-        st.markdown(f"<span style='color:#00FF00'>[正常]</span> {FILE_FACT}", unsafe_allow_html=True)
-        st.markdown(f"<div style='margin-bottom:5px; color:#666; font-size:10px'>包含字段 ({len(df_sales.columns)}):</div>", unsafe_allow_html=True)
-        cols_html = "".join([f"<span class='field-tag'>{c}</span>" for c in df_sales.columns])
-        st.markdown(f"<div>{cols_html}</div>", unsafe_allow_html=True)
-    else:
-        st.markdown(f"<span style='color:#FF3333'>[错误]</span> {FILE_FACT} 缺失", unsafe_allow_html=True)
-        cwd = os.getcwd()
-        try: files_in_dir = os.listdir(cwd)
-        except: files_in_dir = []
-        st.markdown(f"""
-        <div style='font-size:10px; color:#888; background:#111; padding:5px; margin-top:5px; border:1px solid #333'>
-        <b>路径诊断:</b><br>
-        当前目录: {cwd}<br>
-        文件列表: {str(files_in_dir)[:100]}...
-        </div>
-        """, unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class="sidebar-card">
+        <span class="sidebar-label">产品范围 Scope</span>
+        <div class="sidebar-value">全产品 (All Products)</div>
+    </div>
+    <div class="sidebar-card">
+        <span class="sidebar-label">时间范围 Period</span>
+        <div class="sidebar-value">{sidebar_info['time_range']}</div>
+    </div>
+    <div class="sidebar-card">
+        <span class="sidebar-label">渠道范围 Channel</span>
+        <div class="sidebar-value">核心医院 + 实体零售</div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # 2. 字段展示
+    with st.expander("产品字段 (Product Info)"):
+        st.markdown("".join([f"<span class='field-tag'>{c}</span>" for c in sidebar_info['product_cols']]), unsafe_allow_html=True)
+        
+    with st.expander("分类字段 (Classification)"):
+        st.markdown("".join([f"<span class='field-tag'>{c}</span>" for c in sidebar_info['class_cols']]), unsafe_allow_html=True)
+        
+    with st.expander("政策字段 (Policy)"):
+        st.markdown("".join([f"<span class='field-tag'>{c}</span>" for c in sidebar_info['policy_cols']]), unsafe_allow_html=True)
 
     st.markdown("---")
 
-    if df_product is not None:
-        st.markdown(f"<span style='color:#00FF00'>[正常]</span> {FILE_DIM}", unsafe_allow_html=True)
-        cols_html = "".join([f"<span class='field-tag'>{c}</span>" for c in df_product.columns])
-        st.markdown(f"<div>{cols_html}</div>", unsafe_allow_html=True)
-    else:
-        st.markdown(f"<span style='color:#FF3333'>[错误]</span> {FILE_DIM} 缺失", unsafe_allow_html=True)
+    # 3. 历史记录 (Selectbox)
+    st.markdown("### 历史问题 HISTORY")
+    # 获取用户的所有提问
+    user_questions = [m['content'] for m in st.session_state.messages if m['role'] == 'user']
+    # 倒序排列，最新的在前面
+    selected_history = st.selectbox(
+        "选择历史提问以回溯",
+        options=user_questions[::-1] if user_questions else [],
+        index=None,
+        placeholder="暂无历史记录..."
+    )
+    if selected_history:
+        # 简单的回溯逻辑：重新提交该问题 (或者你可以设计为只展示)
+        if st.button("重新提问"):
+            st.session_state.messages.append({"role": "user", "type": "text", "content": selected_history})
+            st.rerun()
+
+    st.markdown("---")
+
+    # 4. 任务列表 (Selectbox)
+    st.markdown("### 任务列表 TASKS")
+    task_options = [
+        "自定义报表生成",
+        "市场概览月报",
+        "竞品监控日报", 
+        "异常波动预警",
+        "重点医院排名"
+    ]
+    selected_task = st.selectbox(
+        "选择快捷任务",
+        options=task_options,
+        index=None,
+        placeholder="选择任务..."
+    )
+    if selected_task:
+        if st.button("执行任务"):
+            st.session_state.messages.append({"role": "user", "type": "text", "content": f"请执行任务：{selected_task}"})
+            st.rerun()
 
     st.divider()
     if st.button("清除对话记忆", use_container_width=True):
