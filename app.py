@@ -521,7 +521,7 @@ with st.sidebar:
     else:
         channel_items = ["渠道"]
     
-    render_chips("🏥 渠道范围", channel_items)
+    render_chips("⚙︎ 渠道范围", channel_items)
 
     # 5. 时间
     time_range_str = "未加载"
@@ -549,7 +549,7 @@ with st.sidebar:
             except:
                 time_range_str = "格式解析失败"
     
-    render_chips("📅 数据时间", [time_range_str], is_highlight=True)
+    render_chips("⏱︎ 数据时间", [time_range_str], is_highlight=True)
 
     st.markdown("---")
     st.markdown(f"<div style='font-size:10px; color:#666; text-align:center;'>Powered by {MODEL_SMART}</div>", unsafe_allow_html=True)
