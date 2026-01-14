@@ -25,11 +25,11 @@ st.set_page_config(
 
 # --- 模型配置 ---
 MODEL_FAST = "gemini-2.0-flash"        
-MODEL_SMART = "gemini-3-pro-preview"       
+MODEL_SMART = "gemini-3-pro-preview"        
 
 # --- 常量定义 ---
 JOIN_KEY = "药品索引"
-FILE_FACT = "fact.csv"       
+FILE_FACT = "fact.csv"        
 FILE_DIM = "ipmdata.xlsx"
 LOGO_FILE = "logo.png"
 
@@ -42,7 +42,7 @@ try:
 except:
     FIXED_API_KEY = "" # 请确保这里有你的 API Key 或者通过 st.secrets 配置
 
-# ================= 2. 视觉体系 (Noir UI - 全中文版 - 圆角优化) =================
+# ================= 2. 视觉体系 (Noir UI - 全中文版 - 按钮位置优化) =================
 
 def get_base64_image(image_path):
     """读取本地图片并转为 Base64"""
@@ -127,17 +127,46 @@ def inject_custom_css():
         .block-container { padding-top: 80px !important; max-width: 1200px; }
         footer { display: none !important; }
 
-        /* === 侧边栏按钮位置 === */
-        section[data-testid="stSidebar"] button[kind="header"] {
-            position: absolute !important; bottom: 20px !important; right: 20px !important; top: auto !important; left: auto !important;
-            background-color: #111 !important; border: 1px solid #333 !important; color: #fff !important;
-            width: 32px; height: 32px; z-index: 999999; pointer-events: auto;
-            border-radius: var(--radius-md) !important;
-        }
+        /* === 侧边栏控制按钮 (解决被遮挡问题) === */
+        
+        /* 1. 当侧边栏收起时，展开按钮显示在【屏幕左下角】 */
         [data-testid="stSidebarCollapsedControl"] {
-            position: fixed !important; bottom: 20px !important; left: 20px !important;
-            background-color: #000 !important; border: 1px solid #333 !important; color: #fff !important;
-            z-index: 999999;
+            position: fixed !important;
+            top: auto !important;
+            bottom: 20px !important;
+            left: 20px !important;
+            z-index: 1000000 !important; /* 确保在最上层 */
+            background-color: #111 !important;
+            border: 1px solid #444 !important;
+            color: #fff !important;
+            border-radius: 50% !important; /* 圆形按钮 */
+            width: 40px !important;
+            height: 40px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+        [data-testid="stSidebarCollapsedControl"]:hover {
+            background-color: #333 !important;
+            border-color: #666 !important;
+            transform: scale(1.1);
+        }
+
+        /* 2. 当侧边栏展开时，关闭按钮(X)显示在【侧边栏底部右侧】 */
+        section[data-testid="stSidebar"] button[kind="header"] {
+            position: absolute !important;
+            top: auto !important;
+            bottom: 20px !important;
+            right: 20px !important;
+            left: auto !important;
+            background-color: #111 !important;
+            border: 1px solid #444 !important;
+            color: #fff !important;
+            z-index: 1000000 !important;
+            width: 32px !important;
+            height: 32px !important;
             border-radius: var(--radius-md) !important;
         }
 
@@ -608,7 +637,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                     【关键指令】
                     1. **数据范围检查**: 查看上下文中的日期范围。最新的日期决定了“当前周期”。
                     2. **同口径对比 (Like-for-Like)**: 当分析跨年增长或趋势时，**必须**筛选前一年的数据以匹配当前年份的月份/季度范围 (YTD逻辑)。
-                       - 例如: 如果最大日期是 2025-09-30，那么“2024年数据”用于对比时，只能取 2024-01-01 到 2024-09-30，而不是2024全年的数据。
+                        - 例如: 如果最大日期是 2025-09-30，那么“2024年数据”用于对比时，只能取 2024-01-01 到 2024-09-30，而不是2024全年的数据。
                     3. 返回时间范围时，需要说明用的原始表中的哪个时间段 如问最近两年的同比，如果为了对齐数据，则返回格式为 2024Q1~Q3 & 2025Q1~Q3
                     
                     【摘要生成规则 (Summary)】
@@ -736,7 +765,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                     关键指令:
                     1. **数据范围检查**: 查看上下文中的日期范围。最新的日期决定了“当前周期”。
                     2. **同口径对比 (Like-for-Like)**: 当分析跨年增长或趋势时，**必须**筛选前一年的数据以匹配当前年份的月份/季度范围 (YTD逻辑)。
-                       - 例如: 如果最大日期是 2025-09-30，那么“2024年数据”用于对比时，只能取 2024-01-01 到 2024-09-30，而不是2024全年的数据。
+                        - 例如: 如果最大日期是 2025-09-30，那么“2024年数据”用于对比时，只能取 2024-01-01 到 2024-09-30，而不是2024全年的数据。
                     3. **语言**: 所有的 "title" (标题), "desc" (描述), 和 "intent_analysis" (分析思路) 必须使用**简体中文**。
                     4. **完整性**: 提供 2-3 个不同的分析维度。
                     
