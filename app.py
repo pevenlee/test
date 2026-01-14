@@ -423,24 +423,48 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
             KEY: `{JOIN_KEY}`
             """
 
-            # 1. 意图识别
+            # ================= 1. 意图识别 (优化版) =================
+            intent = "inquiry" # 默认值，防止报错
+            
             with st.status("正在分析意图...", expanded=False) as status:
+                # 修改 Prompt，让选项更明确，防止模型直接照抄 "inquiry/analysis"
                 prompt_router = f"""
-                Classify intent.
+                Classify intent of the query based on context.
                 History: {history_str}
                 Query: "{user_query}"
-                Categories: 1. inquiry (data fetch) 2. analysis (breakdown/trend/why) 3. irrelevant
-                Output JSON: {{ "type": "inquiry/analysis/irrelevant" }}
+                
+                Rules:
+                1. If user asks for specific numbers, data, lists, or facts -> "inquiry"
+                2. If user asks for reasons, trends, causes, or complex breakdown -> "analysis"
+                3. If unrelated -> "irrelevant"
+                
+                Output JSON: {{ "type": "result_value" }} 
+                (result_value must be exactly one of: "inquiry", "analysis", "irrelevant")
                 """
+                
                 resp = safe_generate(client, MODEL_FAST, prompt_router, "application/json")
+                
                 if "Error" in resp.text:
                     status.update(label="API 连接错误", state="error")
                     st.stop()
-                intent = clean_json_string(resp.text).get('type', 'inquiry')
+                
+                # 获取结果并进行清洗（关键步骤：转小写、去空格）
+                cleaned_data = clean_json_string(resp.text)
+                if cleaned_data:
+                    raw_intent = cleaned_data.get('type', 'inquiry')
+                    intent = str(raw_intent).lower().strip()
+                else:
+                    intent = "inquiry"
+
                 status.update(label=f"意图: {intent.upper()}", state="complete")
 
-            # 2. 简单查询
-            if intent == 'inquiry':
+            # ================= 逻辑分流 =================
+            
+            # 2. 简单查询 (包含 inquiry 和默认情况)
+            if 'analysis' not in intent and 'irrelevant' not in intent:
+                # 这里使用 'analysis' not in intent 作为条件，意味着只要不是明确的分析，都尝试查询
+                # 这样比 if intent == 'inquiry' 更健壮
+                
                 with st.spinner("正在生成查询代码..."):
                     prompt_code = f"""
                     Role: Python Data Expert.
@@ -479,6 +503,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                             st.session_state.messages.append({"role": "assistant", "type": "df", "content": formatted_df})
                         else:
                             st.warning("无精确匹配，尝试模糊搜索...")
+                            # 简单的模糊搜索回退策略
                             fallback_code = f"result = df_product[df_product.astype(str).apply(lambda x: x.str.contains('{user_query[:2]}', case=False, na=False)).any(axis=1)].head(10)"
                             try:
                                 res_fallback = safe_exec_code(fallback_code, exec_ctx)
@@ -492,7 +517,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                         st.markdown(f'<div class="custom-error">代码执行错误: {e}</div>', unsafe_allow_html=True)
 
             # 3. 深度分析
-            elif intent == 'analysis':
+            elif 'analysis' in intent:
                 shared_ctx = {"df_sales": df_sales.copy(), "df_product": df_product.copy()}
 
                 with st.spinner("正在规划分析路径..."):
@@ -561,8 +586,13 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                             c1, c2 = st.columns(2)
                             if len(next_questions) > 0: c1.button(f"> {next_questions[0]}", use_container_width=True, on_click=handle_followup, args=(next_questions[0],))
                             if len(next_questions) > 1: c2.button(f"> {next_questions[1]}", use_container_width=True, on_click=handle_followup, args=(next_questions[1],))
-            else:
-                st.info("仅限数据查询")
+            
+            elif 'irrelevant' in intent:
+                st.info("该问题似乎与医药数据无关，我是 ChatBI，专注于医药市场分析。")
+                st.session_state.messages.append({"role": "assistant", "type": "text", "content": "该问题与数据无关。"})
 
     except Exception as e:
+        import traceback
         st.markdown(f'<div class="custom-error">系统异常: {str(e)}</div>', unsafe_allow_html=True)
+        # 调试模式下可以打印堆栈
+        # st.code(traceback.format_exc())
