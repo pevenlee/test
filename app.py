@@ -566,7 +566,7 @@ for msg in st.session_state.messages:
 # --- 猜你想问 (左对齐按钮) ---
 if not st.session_state.messages:
     st.markdown("### Illuminating the Pharmaceutical Industry Through AI")
-    st.markdown("### 我们正在通过人工智能重塑数据，点亮医药行业")
+    st.markdown("### 我们正在通过人工智能重塑数据，点亮医药行业，有什么要问我们？")
     c1, c2, c3 = st.columns(3)
     def handle_preset(question):
         st.session_state.messages.append({"role": "user", "type": "text", "content": question})
@@ -576,7 +576,7 @@ if not st.session_state.messages:
     if c3.button("销售额过亿的，独家创新药有哪些，总结一下他们的画像"): handle_preset("销售额过亿的，独家创新药有哪些，总结一下他们的画像")
 
 # --- Input ---
-query = st.chat_input("请输入产品的相关内容...")
+query = st.chat_input("了解中国医药市场，从这里开始...")
 if query:
     st.session_state.messages.append({"role": "user", "type": "text", "content": query})
     st.rerun()
