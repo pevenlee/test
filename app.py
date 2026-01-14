@@ -89,7 +89,7 @@ def inject_custom_css():
             background: #222 !important;
         }
 
-        /* === 顶部导航栏 (修复侧边栏冲突) === */
+        /* === 顶部导航栏 (修复侧边栏冲突 & 右上角堆叠) === */
         
         /* 1. 让 Streamlit 原生 Header 浮在最上层，确保按钮可点 */
         header[data-testid="stHeader"] { 
@@ -110,7 +110,11 @@ def inject_custom_css():
             border-bottom: 1px solid var(--border-color);
             z-index: 999990; /* 略低于侧边栏和原生Header */
             display: flex; align-items: center; justify-content: space-between;
-            padding: 0 24px 0 70px; /* 【关键修改】左侧增加 padding，避开侧边栏开关 */
+            /* padding: 上 右 下 左 
+               【关键修改】右侧改为 100px，给 Streamlit 原生菜单按钮留出位置，防止重叠 
+               左侧保持 70px，给侧边栏按钮留位置
+            */
+            padding: 0 100px 0 70px; 
         }
         
         /* 3. 强制提升侧边栏层级，使其能覆盖顶导 */
