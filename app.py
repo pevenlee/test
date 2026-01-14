@@ -701,6 +701,9 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                     - 销售额列：必须转换为 `int` 类型 (无小数)。
                     - **严禁**对份额列使用 `astype(int)`，否则小于 1% 的份额会变成 0
                     10. **市场份额** 当提到计算份额时，优先定义分母是用户提到的所有产品总 > 对应细分领域下所有产品总 > 全产品总和；然后再做计算
+                    11. **代码安全 - 严禁 inplace=True 后赋值**: 
+                        - 错误写法: `df = df.rename(..., inplace=True)` (这会导致 df 变成 None)
+                        - 正确写法: `df = df.rename(...)` 或 `df.rename(..., inplace=True)` (不赋值)
                     
                     
                     【关键指令】
@@ -746,7 +749,8 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                     render_protocol_card(summary_obj)
                     
                     try:
-                        exec_ctx = {"df_sales": df_sales, "df_product": df_product}
+                        # 【修正】使用 copy() 确保数据隔离
+                        exec_ctx = {"df_sales": df_sales.copy(), "df_product": df_product.copy()}
                         res_raw = safe_exec_code(plan['code'], exec_ctx)
                         res_df = normalize_result(res_raw)
                         
@@ -821,8 +825,8 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
 
             # 3. 深度分析
             elif 'analysis' in intent:
-                shared_ctx = {"df_sales": df_sales.copy(), "df_product": df_product.copy()}
-
+                # 【修正】移除外层 shared_ctx，改为循环内独立 context
+                
                 with st.spinner("正在规划分析路径..."):
                     # [中文提示词] 深度分析 & 四要素提取
                     prompt_plan = f"""
@@ -835,8 +839,9 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                     1. **数据范围检查**: 查看上下文中的日期范围。最新的日期决定了“当前周期”。
                     2. **同口径对比 (Like-for-Like)**: 当分析跨年增长或趋势时，**必须**筛选前一年的数据以匹配当前年份的月份/季度范围 (YTD逻辑)。
                         - 例如: 如果最大日期是 2025-09-30，那么“2024年数据”用于对比时，只能取 2024-01-01 到 2024-09-30，而不是2024全年的数据。
-                    3. **语言**: 所有的 "title" (标题), "desc" (描述), 和 "intent_analysis" (分析思路) 必须使用**简体中文**。
-                    4. **完整性**: 提供 2-3 个不同的分析维度。
+                    3. **代码安全**: 绝对禁止 `df = df.func(inplace=True)` 这种写法，这会导致 DataFrame 变成 NoneType 引发合并错误。
+                    4. **语言**: 所有的 "title" (标题), "desc" (描述), 和 "intent_analysis" (分析思路) 必须使用**简体中文**。
+                    5. **完整性**: 提供 2-3 个不同的分析维度。
                     
                     严格输出 JSON (不要Markdown, 不要代码块): 
                     {{ 
@@ -878,8 +883,17 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                     for angle in plan_json.get('angles', []):
                         with st.container():
                             st.markdown(f"**> {angle['title']}**")
+                            
+                            # 【修正】循环内部创建独立 Context，防止污染
+                            local_ctx = {
+                                "df_sales": df_sales.copy(), 
+                                "df_product": df_product.copy(),
+                                "pd": pd,
+                                "np": np
+                            }
+                            
                             try:
-                                res_raw = safe_exec_code(angle['code'], shared_ctx)
+                                res_raw = safe_exec_code(angle['code'], local_ctx)
                                 # [关键修复]：确保此处的 if 语句缩进正确，并且逻辑完整
                                 if isinstance(res_raw, dict) and any(isinstance(v, (pd.DataFrame, pd.Series)) for v in res_raw.values()):
                                     res_df = pd.DataFrame() # 初始化为空，避免后面报错
