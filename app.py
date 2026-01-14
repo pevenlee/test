@@ -297,11 +297,11 @@ def safe_generate(client, model, prompt, mime_type="text/plain"):
 def stream_generate(client, model, prompt):
     """流式生成内容，用于 st.write_stream 实现打字机效果"""
     try:
-        response = client.models.generate_content(
+        # 修正点：使用 generate_content_stream 方法，并移除 stream=True 参数
+        response = client.models.generate_content_stream(
             model=model, 
             contents=prompt, 
             config=types.GenerateContentConfig(response_mime_type="text/plain"),
-            stream=True
         )
         for chunk in response:
             if chunk.text:
