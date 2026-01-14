@@ -117,6 +117,8 @@ def inject_custom_css():
         section[data-testid="stSidebar"] {
             z-index: 999991 !important;
             padding-top: 60px !important; /* 顶部留白，防止内容被遮挡 */
+            background-color: #0A0A0A !important; /* 侧边栏背景色 */
+            border-right: 1px solid #333;
         }
         
         .nav-left { display: flex; align-items: center; gap: 12px; }
@@ -400,6 +402,28 @@ client = get_client()
 df_sales = load_local_data(FILE_FACT)
 df_product = load_local_data(FILE_DIM)
 
+# --- [新增] Sidebar: 数据字典 ---
+with st.sidebar:
+    st.markdown("### 🗃️ 数据字典")
+    st.markdown("以下为当前已加载的数据字段：")
+    
+    if df_sales is not None:
+        with st.expander("📊 销售事实表 (Fact)", expanded=True):
+            for col in df_sales.columns:
+                st.markdown(f"- <span style='color:#AAA'>{col}</span>", unsafe_allow_html=True)
+    else:
+        st.warning(f"缺失: {FILE_FACT}")
+
+    if df_product is not None:
+        with st.expander("🏷️ 产品维度表 (Dim)", expanded=False):
+            for col in df_product.columns:
+                st.markdown(f"- <span style='color:#AAA'>{col}</span>", unsafe_allow_html=True)
+    else:
+        st.warning(f"缺失: {FILE_DIM}")
+
+    st.markdown("---")
+    st.markdown(f"<div style='font-size:10px; color:#666;'>Model: {MODEL_SMART}</div>", unsafe_allow_html=True)
+
 # --- Top Nav ---
 logo_b64 = get_base64_image(LOGO_FILE)
 if logo_b64:
@@ -413,7 +437,7 @@ if user_avatar_b64:
 else:
     user_avatar_html = '<div class="user-avatar-circle" style="color:#FFF; font-size:10px;">User</div>'
 
-# 调整后的 HTML 结构，无需 nav-logo-icon 的 div，直接放 image 即可
+# 调整后的 HTML 结构
 st.markdown(f"""
 <div class="fixed-header-container">
     <div class="nav-left">
