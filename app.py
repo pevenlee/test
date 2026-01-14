@@ -565,8 +565,8 @@ for msg in st.session_state.messages:
 
 # --- 猜你想问 (左对齐按钮) ---
 if not st.session_state.messages:
-    st.markdown("## Illuminating the Pharmaceutical Industry Through AI")
-    st.markdown("## 我们正在通过人工智能重塑数据，点亮医药行业")
+    st.markdown("### Illuminating the Pharmaceutical Industry Through AI")
+    st.markdown("### 我们正在通过人工智能重塑数据，点亮医药行业")
     c1, c2, c3 = st.columns(3)
     def handle_preset(question):
         st.session_state.messages.append({"role": "user", "type": "text", "content": question})
