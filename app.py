@@ -24,7 +24,7 @@ st.set_page_config(
 )
 
 # --- 模型配置 ---
-MODEL_FAST = "gemini-3.0-flash-preview"        
+MODEL_FAST = "gemini-3-flash-preview"        
 MODEL_SMART = "gemini-3-pro-preview"       
 
 # --- 常量定义 ---
