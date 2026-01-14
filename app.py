@@ -20,7 +20,7 @@ warnings.filterwarnings('ignore')
 st.set_page_config(
     page_title="ChatBI by Pharmcube", 
     layout="wide", 
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded" # 确保侧边栏默认展开
 )
 
 # --- 模型配置 ---
@@ -124,7 +124,7 @@ def inject_custom_css():
         .block-container { padding-top: 80px !important; max-width: 1200px; }
         footer { display: none !important; }
 
-        /* === 侧边栏美化 (回归原生布局，去除强制 fixed 导致的遮挡) === */
+        /* === 侧边栏美化 === */
         section[data-testid="stSidebar"] {
             background-color: #000000 !important;
             border-right: 1px solid #333 !important;
@@ -139,30 +139,6 @@ def inject_custom_css():
             letter-spacing: 1px;
             margin-top: 10px;
             margin-bottom: 10px;
-        }
-
-        /* 侧边栏数据卡片样式 */
-        .sidebar-card {
-            background: #111;
-            border: 1px solid #222;
-            padding: 10px;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            font-size: 13px;
-        }
-        .sidebar-label { color: #555; font-size: 11px; display: block; margin-bottom: 2px; }
-        .sidebar-value { color: #DDD; font-weight: bold; font-family: 'JetBrains Mono', monospace; }
-
-        /* 字段 Tag 样式 */
-        .field-tag {
-            display: inline-block;
-            background: #1A1A1A;
-            color: #999;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 11px;
-            margin: 2px;
-            border: 1px solid #333;
         }
 
         /* === 聊天气泡 & 头像 === */
@@ -280,57 +256,6 @@ def load_local_data(filename):
                 except: pass
         return df
     return None
-
-def analyze_sidebar_data(df_sales, df_product):
-    """侧边栏数据分析辅助函数：计算时间范围和字段归类"""
-    info = {
-        "time_range": "未知",
-        "product_cols": [],
-        "class_cols": [],
-        "policy_cols": []
-    }
-    
-    # 1. 计算时间范围 (格式 2021Q1~2025Q3)
-    if df_sales is not None:
-        try:
-            # 寻找年份和季度列
-            year_col = next((c for c in df_sales.columns if 'year' in c.lower() or '年' in c), None)
-            q_col = next((c for c in df_sales.columns if 'quarter' in c.lower() or '季' in c or c.lower() == 'q'), None)
-            
-            if year_col:
-                years = sorted([int(y) for y in df_sales[year_col].dropna().unique()])
-                if years:
-                    min_year, max_year = years[0], years[-1]
-                    min_q, max_q = "", ""
-                    
-                    if q_col:
-                        # 尝试获取最小年的最小季 和 最大年的最大季
-                        try:
-                            min_q_val = df_sales[df_sales[year_col] == min_year][q_col].min()
-                            max_q_val = df_sales[df_sales[year_col] == max_year][q_col].max()
-                            if pd.notnull(min_q_val): min_q = f"Q{int(min_q_val)}"
-                            if pd.notnull(max_q_val): max_q = f"Q{int(max_q_val)}"
-                        except: pass
-                    
-                    info["time_range"] = f"{min_year}{min_q} ~ {max_year}{max_q}"
-        except:
-            pass
-
-    # 2. 字段分类
-    if df_product is not None:
-        cols = df_product.columns.tolist()
-        for c in cols:
-            cl = c.lower()
-            # 简单的关键词归类规则
-            if any(k in cl for k in ['集采', '医保', '基药', 'vbp', 'nrdl', '一致性', 'policy']):
-                info["policy_cols"].append(c)
-            elif any(k in cl for k in ['atc', '类', '科室', '领域', 'class', 'thera', 'area', 'group']):
-                info["class_cols"].append(c)
-            # 排除掉ID类，剩下的认为是产品属性
-            elif 'id' not in cl and 'index' not in cl: 
-                info["product_cols"].append(c)
-                
-    return info
 
 def get_dataframe_info(df, name="df"):
     if df is None: return f"{name}: NULL"
@@ -507,85 +432,16 @@ st.markdown(f"""
 
 if "messages" not in st.session_state: st.session_state.messages = []
 
-# --- Sidebar (重构版) ---
-sidebar_info = analyze_sidebar_data(df_sales, df_product)
-
+# --- Sidebar (重构版 - 清空内容，仅保留结构) ---
 with st.sidebar:
-    # 1. 数据资产卡片
-    st.markdown("### 数据资产 DATA ASSETS")
+    st.markdown("### ChatBI 控制台")
+    st.info("功能区正在开发中...")
     
-    st.markdown(f"""
-    <div class="sidebar-card">
-        <span class="sidebar-label">产品范围 Scope</span>
-        <div class="sidebar-value">全产品 (All Products)</div>
-    </div>
-    <div class="sidebar-card">
-        <span class="sidebar-label">时间范围 Period</span>
-        <div class="sidebar-value">{sidebar_info['time_range']}</div>
-    </div>
-    <div class="sidebar-card">
-        <span class="sidebar-label">渠道范围 Channel</span>
-        <div class="sidebar-value">核心医院 + 实体零售</div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # 2. 字段展示
-    with st.expander("产品字段 (Product Info)"):
-        st.markdown("".join([f"<span class='field-tag'>{c}</span>" for c in sidebar_info['product_cols']]), unsafe_allow_html=True)
-        
-    with st.expander("分类字段 (Classification)"):
-        st.markdown("".join([f"<span class='field-tag'>{c}</span>" for c in sidebar_info['class_cols']]), unsafe_allow_html=True)
-        
-    with st.expander("政策字段 (Policy)"):
-        st.markdown("".join([f"<span class='field-tag'>{c}</span>" for c in sidebar_info['policy_cols']]), unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    # 3. 历史记录 (Selectbox)
-    st.markdown("### 历史问题 HISTORY")
-    # 获取用户的所有提问
-    user_questions = [m['content'] for m in st.session_state.messages if m['role'] == 'user']
-    # 倒序排列，最新的在前面
-    selected_history = st.selectbox(
-        "选择历史提问以回溯",
-        options=user_questions[::-1] if user_questions else [],
-        index=None,
-        placeholder="暂无历史记录..."
-    )
-    if selected_history:
-        # 简单的回溯逻辑：重新提交该问题 (或者你可以设计为只展示)
-        if st.button("重新提问"):
-            st.session_state.messages.append({"role": "user", "type": "text", "content": selected_history})
-            st.rerun()
-
-    st.markdown("---")
-
-    # 4. 任务列表 (Selectbox)
-    st.markdown("### 任务列表 TASKS")
-    task_options = [
-        "自定义报表生成",
-        "市场概览月报",
-        "竞品监控日报", 
-        "异常波动预警",
-        "重点医院排名"
-    ]
-    selected_task = st.selectbox(
-        "选择快捷任务",
-        options=task_options,
-        index=None,
-        placeholder="选择任务..."
-    )
-    if selected_task:
-        if st.button("执行任务"):
-            st.session_state.messages.append({"role": "user", "type": "text", "content": f"请执行任务：{selected_task}"})
-            st.rerun()
-
-    st.divider()
+    # 底部清空按钮可以保留，方便调试，不需要的话可以删除
+    st.markdown("<div style='height: 50px;'></div>", unsafe_allow_html=True)
     if st.button("清除对话记忆", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
-    
-    st.markdown("<div style='height: 50px;'></div>", unsafe_allow_html=True)
 
 # --- Chat History ---
 for msg in st.session_state.messages:
@@ -627,7 +483,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
 
         with st.chat_message("assistant", avatar=get_avatar("assistant")):
             if df_sales is None or df_product is None:
-                err_text = f"数据源缺失。请检查侧边栏路径诊断。 (需要文件: {FILE_FACT}, {FILE_DIM})"
+                err_text = f"数据源缺失。请检查路径配置。 (需要文件: {FILE_FACT}, {FILE_DIM})"
                 st.markdown(f'<div class="custom-error">{err_text}</div>', unsafe_allow_html=True)
                 st.session_state.messages.append({"role": "assistant", "type": "error", "content": err_text})
                 st.stop()
@@ -825,7 +681,6 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
 
             # 3. 深度分析
             elif 'analysis' in intent:
-                # 【修正】移除外层 shared_ctx，改为循环内独立 context
                 
                 with st.spinner("正在规划分析路径..."):
                     # [中文提示词] 深度分析 & 四要素提取
@@ -894,19 +749,15 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                             
                             try:
                                 res_raw = safe_exec_code(angle['code'], local_ctx)
-                                # [关键修复]：确保此处的 if 语句缩进正确，并且逻辑完整
                                 if isinstance(res_raw, dict) and any(isinstance(v, (pd.DataFrame, pd.Series)) for v in res_raw.values()):
-                                    res_df = pd.DataFrame() # 初始化为空，避免后面报错
-                                    # 遍历字典，逐个展示
+                                    res_df = pd.DataFrame() 
                                     for k, v in res_raw.items():
-                                        st.markdown(f"**- {k}**") # 显示子标题
-                                        sub_df = normalize_result(v) # 确保每个值也是标准 DF
+                                        st.markdown(f"**- {k}**")
+                                        sub_df = normalize_result(v)
                                         st.dataframe(format_display_df(sub_df), use_container_width=True)
-                                        # 将最后一个子表作为主表用于后续生成 insight（或者你可以选择合并）
                                         res_df = sub_df 
                                         st.session_state.messages.append({"role": "assistant", "type": "df", "content": sub_df})
                                 else:
-                                    # 常规处理：单表或简单值
                                     res_df = normalize_result(res_raw)
                                     if not safe_check_empty(res_df):
                                         formatted_df = format_display_df(res_df)
