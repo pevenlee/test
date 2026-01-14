@@ -417,7 +417,7 @@ st.markdown(f"""
         <div class="nav-logo-text">ChatBI</div>
     </div>
     <div class="nav-right">
-        <div class="nav-tag">管理员</div>
+        <div class="nav-tag">Peiwen</div>
         {user_avatar_html}
     </div>
 </div>
