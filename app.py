@@ -593,7 +593,7 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"], avatar=avatar_file):
         if msg["type"] == "text": 
             role_class = "p-ai" if msg["role"] == "assistant" else "p-user"
-            prefix = "系统 > " if msg["role"] == "assistant" else "用户 > "
+            prefix = "Doc. > " if msg["role"] == "assistant" else "You > "
             st.markdown(f"<span class='msg-prefix {role_class}'>{prefix}</span>{msg['content']}", unsafe_allow_html=True)
         elif msg["type"] == "df": 
             st.dataframe(msg["content"], use_container_width=True)
