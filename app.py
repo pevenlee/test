@@ -129,45 +129,55 @@ def inject_custom_css():
 
         /* === 侧边栏控制按钮 (解决被遮挡问题) === */
         
-        /* 1. 当侧边栏收起时，展开按钮显示在【屏幕左下角】 */
-        [data-testid="stSidebarCollapsedControl"] {
-            position: fixed !important;
-            top: auto !important;
-            bottom: 20px !important;
-            left: 20px !important;
-            z-index: 1000000 !important; /* 确保在最上层 */
-            background-color: #111 !important;
-            border: 1px solid #444 !important;
-            color: #fff !important;
-            border-radius: 50% !important; /* 圆形按钮 */
-            width: 40px !important;
-            height: 40px !important;
+       /* === 侧边栏控制按钮 (强力修复版) === */
+        
+        /* 1. [关键] 展开按钮 (当侧边栏收起时显示) */
+        /* 兼容不同版本的 Streamlit 选择器 */
+        [data-testid="stSidebarCollapsedControl"], 
+        div[data-testid="stSidebarCollapsedControl"],
+        button[data-testid="stSidebarCollapsedControl"] {
             display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            transition: all 0.3s ease;
-        }
-        [data-testid="stSidebarCollapsedControl"]:hover {
-            background-color: #333 !important;
-            border-color: #666 !important;
-            transform: scale(1.1);
+            visibility: visible !important;
+            position: fixed !important;
+            left: 20px !important;
+            bottom: 20px !important;
+            top: auto !important; /* 强制覆盖默认的 top 定位 */
+            right: auto !important;
+            
+            z-index: 9999999 !important; /* 极高的层级，确保不被任何东西遮挡 */
+            
+            background-color: #111 !important;
+            color: #fff !important;
+            border: 2px solid #666 !important; /* 加粗边框以便发现 */
+            border-radius: 50% !important;
+            width: 44px !important;
+            height: 44px !important;
+            
+            /* 阴影让它浮起来 */
+            box-shadow: 0 0 10px rgba(0,0,0,0.5) !important;
         }
 
-        /* 2. 当侧边栏展开时，关闭按钮(X)显示在【侧边栏底部右侧】 */
+        /* hover 效果 */
+        [data-testid="stSidebarCollapsedControl"]:hover {
+            background-color: #333 !important;
+            transform: scale(1.1);
+            border-color: #FFF !important;
+        }
+
+        /* 2. 关闭按钮 (当侧边栏展开时显示，位于侧边栏内部) */
         section[data-testid="stSidebar"] button[kind="header"] {
+            display: block !important;
             position: absolute !important;
-            top: auto !important;
             bottom: 20px !important;
             right: 20px !important;
+            top: auto !important;
             left: auto !important;
-            background-color: #111 !important;
-            border: 1px solid #444 !important;
+            
+            z-index: 999999 !important;
+            
+            background-color: #222 !important;
             color: #fff !important;
-            z-index: 1000000 !important;
-            width: 32px !important;
-            height: 32px !important;
-            border-radius: var(--radius-md) !important;
+            border: 1px solid #444 !important;
         }
 
         /* === 错误提示美化 === */
