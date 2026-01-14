@@ -698,6 +698,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                     - 份额列、变化率列：必须强制转换为 `float` 类型，保留 1 位小数 (`round(1)`)。
                     - 销售额列：必须转换为 `int` 类型 (无小数)。
                     - **严禁**对份额列使用 `astype(int)`，否则小于 1% 的份额会变成 0
+                    10. **市场份额** 当提到计算份额时，需要识别分母是用户提到的所有产品总和 or 对应细分领域下所有产品总和 or 全产品总和；然后在做计算
                     
                     
                     【关键指令】
