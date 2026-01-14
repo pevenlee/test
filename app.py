@@ -743,15 +743,15 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
 
                         # === Follow-up questions ===
                         prompt_next = f"""
-                        Based on the analysis above, suggest 2 follow-up questions in Chinese. 
+                        基于上述分析，输出两个跟使用本数据库相关，引导客户追问思路的问题. 
                         Output ONLY a JSON List of strings. 
                         Example format: ["第一个问题是什么?", "第二个问题是什么?"]
                         """
-                        resp_next = safe_generate(client, MODEL_FAST, prompt_next, "application/json")
+                        resp_next = safe_generate(client, MODEL_SMART, prompt_next, "application/json")
                         next_questions = clean_json_string(resp_next.text)
 
                         if isinstance(next_questions, list) and len(next_questions) > 0:
-                            st.markdown("### 建议追问")
+                            st.markdown("### 是否还想问如下问题？")
                             c1, c2 = st.columns(2)
                             
                             def get_q_text(q):
