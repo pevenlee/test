@@ -41,7 +41,7 @@ try:
 except:
     FIXED_API_KEY = "" # 请确保这里有你的 API Key 或者通过 st.secrets 配置
 
-# ================= 2. 视觉体系 (Noir UI - 简洁稳定版) =================
+# ================= 2. 视觉体系 (Noir UI - 侧边栏兼容版) =================
 
 def get_base64_image(image_path):
     """读取本地图片并转为 Base64"""
@@ -89,19 +89,34 @@ def inject_custom_css():
             background: #222 !important;
         }
 
-        /* === 顶部导航栏 === */
+        /* === 顶部导航栏 (修复侧边栏冲突) === */
+        
+        /* 1. 让 Streamlit 原生 Header 浮在最上层，确保按钮可点 */
         header[data-testid="stHeader"] { 
             background: transparent !important; 
-            z-index: 10 !important;
+            z-index: 999992 !important;
+            height: 60px !important;
         }
         
+        /* 隐藏原生 Header 的装饰条，只保留按钮 */
+        header[data-testid="stHeader"] > div:first-child {
+            background: transparent !important;
+        }
+        
+        /* 2. 自定义顶导样式调整 */
         .fixed-header-container {
             position: fixed; top: 0; left: 0; width: 100%; height: 60px;
-            background-color: rgba(0,0,0,0.95);
+            background-color: rgba(5,5,5,0.95);
             border-bottom: 1px solid var(--border-color);
-            z-index: 999990; 
+            z-index: 999990; /* 略低于侧边栏和原生Header */
             display: flex; align-items: center; justify-content: space-between;
-            padding: 0 24px;
+            padding: 0 24px 0 70px; /* 【关键修改】左侧增加 padding，避开侧边栏开关 */
+        }
+        
+        /* 3. 强制提升侧边栏层级，使其能覆盖顶导 */
+        section[data-testid="stSidebar"] {
+            z-index: 999991 !important;
+            padding-top: 60px !important; /* 顶部留白，防止内容被遮挡 */
         }
         
         .nav-left { display: flex; align-items: center; gap: 12px; }
@@ -398,10 +413,11 @@ if user_avatar_b64:
 else:
     user_avatar_html = '<div class="user-avatar-circle" style="color:#FFF; font-size:10px;">User</div>'
 
+# 调整后的 HTML 结构，无需 nav-logo-icon 的 div，直接放 image 即可
 st.markdown(f"""
 <div class="fixed-header-container">
     <div class="nav-left">
-        <div class="nav-logo-icon">{logo_html}</div>
+        {logo_html}
         <div class="nav-logo-text">ChatBI</div>
     </div>
     <div class="nav-right">
