@@ -465,7 +465,7 @@ df_product = load_local_data(FILE_DIM)
 
 # --- [重构] Sidebar: 数据字典 & 范围 ---
 with st.sidebar:
-    st.markdown("### 📰 数据字典")
+    st.markdown("### ☷ 可用数据字段范围")
     
     # 获取所有可用列名
     all_cols = set()
@@ -500,11 +500,11 @@ with st.sidebar:
 
     # 2. 政策标签
     policy_fields = ["医保", "最早医保纳入年份", "集采批次", "集采结果", "一致性评价", "首次上市年代"]
-    render_chips("📜 政策标签", policy_fields)
+    render_chips("◆ 政策标签", policy_fields)
 
     # 3. 指标类型
     metric_fields = ["销售额", "销售量"]
-    render_chips("📈 指标类型", metric_fields)
+    render_chips("〽︎ 指标类型", metric_fields)
 
     # 4. 渠道
     # 尝试从数据中获取渠道值，如果不行则显示字段名
