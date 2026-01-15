@@ -272,7 +272,7 @@ def inject_custom_css():
             text-align: left !important;
             border-radius: 0 var(--radius-md) var(--radius-md) 0; 
         }
-        .mini-insight { color: #666; font-size: 12px; font-style: italic; border-top: 1px solid #222; margin-top: 8px; padding-top: 4px; }
+        .mini-insight { color: #DDD; font-size: 12px; font-style: italic; border-top: 1px solid #222; margin-top: 8px; padding-top: 4px; }
         
         /* 错误提示 */
         .custom-error {
