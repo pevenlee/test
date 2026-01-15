@@ -356,23 +356,71 @@ def clean_json_string(text):
              except: pass
     return None
 
-def safe_generate(client, model, prompt, mime_type="text/plain"):
+# --- [新增] API 重试逻辑核心 ---
+def safe_generate(client, model, prompt, mime_type="text/plain", max_retries=3):
+    """
+    带重试机制的 API 调用
+    """
     config = types.GenerateContentConfig(response_mime_type=mime_type)
-    try: return client.models.generate_content(model=model, contents=prompt, config=config)
-    except Exception as e: return type('obj', (object,), {'text': f"Error: {e}"})
+    
+    retry_count = 0
+    base_delay = 2 # 初始等待 2 秒
+    
+    while retry_count <= max_retries:
+        try:
+            return client.models.generate_content(model=model, contents=prompt, config=config)
+        except Exception as e:
+            error_str = str(e)
+            # 检查是否为 429 (Resource exhausted) 或 503 (Server unavailable)
+            if "429" in error_str or "429" in str(getattr(e, 'code', '')) or "Resource exhausted" in error_str:
+                if retry_count == max_retries:
+                    # 超过最大重试次数，返回错误
+                    return type('obj', (object,), {'text': f"Error (Max Retries): {e}"})
+                
+                wait_time = base_delay * (2 ** retry_count) # 指数退避: 2s, 4s, 8s
+                st.toast(f"⏳ API 请求过于频繁，正在重试 ({retry_count + 1}/{max_retries})...等待 {wait_time}秒", icon="⚠️")
+                time.sleep(wait_time)
+                retry_count += 1
+            else:
+                # 如果是其他错误 (如 400 Bad Request)，直接返回，不重试
+                return type('obj', (object,), {'text': f"Error: {e}"})
 
-def stream_generate(client, model, prompt):
-    try:
-        response = client.models.generate_content_stream(
-            model=model, 
-            contents=prompt, 
-            config=types.GenerateContentConfig(response_mime_type="text/plain"),
-        )
-        for chunk in response:
-            if chunk.text:
-                yield chunk.text
-    except Exception as e:
-        yield f"Stream Error: {e}"
+def stream_generate(client, model, prompt, max_retries=3):
+    """
+    带重试机制的流式生成
+    注意：流式生成如果中途中断，通常需要重新开始整个请求
+    """
+    config = types.GenerateContentConfig(response_mime_type="text/plain")
+    
+    retry_count = 0
+    base_delay = 2
+    
+    while retry_count <= max_retries:
+        try:
+            response = client.models.generate_content_stream(
+                model=model, 
+                contents=prompt, 
+                config=config
+            )
+            for chunk in response:
+                if chunk.text:
+                    yield chunk.text
+            return # 成功生成完则退出函数
+            
+        except Exception as e:
+            error_str = str(e)
+            if "429" in error_str or "429" in str(getattr(e, 'code', '')) or "Resource exhausted" in error_str:
+                if retry_count == max_retries:
+                    yield f"Stream Error (Max Retries): {e}"
+                    return
+                
+                wait_time = base_delay * (2 ** retry_count)
+                st.toast(f"⏳ 流式生成连接繁忙，正在重试 ({retry_count + 1}/{max_retries})...", icon="⚠️")
+                time.sleep(wait_time)
+                retry_count += 1
+            else:
+                yield f"Stream Error: {e}"
+                return
 
 def simulated_stream(text, speed=0.01):
     for word in text:
