@@ -23,8 +23,8 @@ st.set_page_config(
 )
 
 # --- 模型配置 ---
-MODEL_FAST = "gemini-2.0-flash"        
-MODEL_SMART = "gemini-2.0-flash-thinking-exp-01-21"        
+MODEL_FAST = "gemini-3.0-flash"        
+MODEL_SMART = "gemini-3-pro-preview"        
 
 # --- 常量定义 ---
 JOIN_KEY = "药品索引"
