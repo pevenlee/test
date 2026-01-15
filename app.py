@@ -642,7 +642,7 @@ with st.sidebar:
 
     # [新增] 下载按钮
     st.markdown("---")
-    st.markdown("### 📥 报告导出")
+    st.markdown("### 报告导出")
     if "messages" in st.session_state and len(st.session_state.messages) > 0:
         pdf_data = generate_pdf_report(st.session_state.messages)
         if pdf_data:
