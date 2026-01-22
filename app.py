@@ -27,14 +27,14 @@ st.set_page_config(
 )
 
 # --- 模型配置 ---
-MODEL_FAST = "gemini-3-pro-flash-preview"         
+MODEL_FAST = "gemini-3-pro-flash-preview"          
 MODEL_SMART = "gemini-3-pro-preview"
 # [新增] 专门用于生成绘图代码的模型
 MODEL_VISUAL = "gemini-3-pro-image-preview" 
 
 # --- 常量定义 ---
 JOIN_KEY = "药品索引"
-FILE_FACT = "fact.csv"         
+FILE_FACT = "fact.csv"          
 FILE_DIM = "ipmdata.xlsx"
 LOGO_FILE = "logo.png"
 
@@ -798,6 +798,8 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
             
             # 2. 简单查询
             if 'analysis' not in intent and 'irrelevant' not in intent:
+                
+                plan = None
                 with st.spinner("正在生成查询代码，这个过程可能需要1~2分钟，请耐心等待…"):
                     # [中文提示词] 简单查询 & 四要素提取
                     prompt_code = f"""
@@ -850,6 +852,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                     resp_code = safe_generate(client, MODEL_SMART, prompt_code, "application/json")
                     plan = clean_json_string(resp_code.text)
                 
+                # --- [修正点] 将渲染逻辑移出 st.spinner 块 ---
                 if plan:
                     # [新功能] 打印数据调用逻辑
                     summary_obj = plan.get('summary', {})
@@ -989,6 +992,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
             # 3. 深度分析
             elif 'analysis' in intent:
                 
+                plan_json = None
                 with st.spinner("正在规划分析路径，这个过程可能需要1~2分钟，请耐心等待..."):
                     # [中文提示词] 深度分析 & 四要素提取
                     prompt_plan = f"""
@@ -1026,6 +1030,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                     resp_plan = safe_generate(client, MODEL_SMART, prompt_plan, "application/json")
                     plan_json = clean_json_string(resp_plan.text)
                 
+                # --- [修正点] 将渲染逻辑移出 st.spinner 块 ---
                 if plan_json:
                     # [新功能] 打印分析思路
                     intro_text = plan_json.get('intent_analysis', '分析思路生成中...')
