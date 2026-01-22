@@ -27,7 +27,7 @@ st.set_page_config(
 )
 
 # --- 模型配置 ---
-MODEL_FAST = "gemini-2.0-flash"         
+MODEL_FAST = "gemini-3-pro-flash-preview"         
 MODEL_SMART = "gemini-3-pro-preview"
 # [新增] 专门用于生成绘图代码的模型
 MODEL_VISUAL = "gemini-3-pro-image-preview" 
@@ -541,6 +541,8 @@ def generate_chart_code(df, query):
        - 对比类 -> 条形图 (px.bar)
        - 趋势类 -> 折线图 (px.line)
        - 占比类 -> 饼图/环形图 (px.pie)
+       - 贡献类 -> 瀑布图
+       - 多维对比 -> 气泡图
     4. 设置图表模板为 'plotly_dark' 以适配黑色背景。
     5. 返回纯 Python 代码，不要包含 Markdown 标记（如 ```python）。
     
@@ -892,6 +894,11 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                                 "query": user_query # 保存上下文以便绘图使用
                             })
                             
+                            # ================= 🔴 即时显示按钮 🔴 =================
+                            if st.button("📊 制作图表", key=f"btn_chart_{len(st.session_state.messages)-1}"):
+                                st.rerun()
+                            # =======================================================
+                            
                             # ==========================================
                             # [新增功能 START] 1. Flash 快速总结表格
                             # ==========================================
@@ -931,7 +938,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                                 严格输出 JSON 字符串列表。
                                 示例格式: ["查看该产品的分医院排名", "分析不同剂型的份额变化"]
                                 """
-                                resp_next = safe_generate(client, MODEL_SMART, prompt_next, "application/json")
+                                resp_next = safe_generate(client, MODEL_FAST, prompt_next, "application/json")
                                 next_questions = clean_json_string(resp_next.text)
 
                                 if isinstance(next_questions, list) and len(next_questions) > 0:
@@ -969,6 +976,10 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                                         "content": res_fallback,
                                         "query": user_query
                                     })
+                                    # ================= 🔴 即时显示按钮 🔴 =================
+                                    if st.button("📊 制作图表", key=f"btn_chart_{len(st.session_state.messages)-1}"):
+                                        st.rerun()
+                                    # =======================================================
                                 else:
                                     st.markdown(f'<div class="custom-error">未找到相关数据</div>', unsafe_allow_html=True)
                             except: pass
@@ -1064,6 +1075,10 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                                             "content": sub_df,
                                             "query": f"{angle['title']} - {user_query}"
                                         })
+                                        # ================= 🔴 即时显示按钮 🔴 =================
+                                        if st.button("📊 制作图表", key=f"btn_chart_{len(st.session_state.messages)-1}"):
+                                            st.rerun()
+                                        # =======================================================
                                         
                                 else:
                                     res_df = normalize_result(res_raw)
@@ -1076,6 +1091,10 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                                             "content": formatted_df,
                                             "query": f"{angle['title']} - {user_query}"
                                         })
+                                        # ================= 🔴 即时显示按钮 🔴 =================
+                                        if st.button("📊 制作图表", key=f"btn_chart_{len(st.session_state.messages)-1}"):
+                                            st.rerun()
+                                        # =======================================================
 
                                         # [中文提示词] 数据解读
                                         prompt_mini = f"用一句话解读以下数据 (中文): \n{res_df.to_string()}"
@@ -1120,7 +1139,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                         仅输出一个 JSON 字符串列表。
                         示例格式: ["分析各省份的市场表现差异", "查看Top5企业的竞争格局"]
                         """
-                        resp_next = safe_generate(client, MODEL_SMART, prompt_next, "application/json")
+                        resp_next = safe_generate(client, MODEL_FAST, prompt_next, "application/json")
                         next_questions = clean_json_string(resp_next.text)
 
                         if isinstance(next_questions, list) and len(next_questions) > 0:
