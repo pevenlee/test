@@ -27,7 +27,7 @@ st.set_page_config(
 )
 
 # --- 模型配置 ---
-MODEL_FAST = "gemini-3-pro-flash-preview"         
+MODEL_FAST = "gemini-2.0-flash"         
 MODEL_SMART = "gemini-3-pro-preview"
 # [新增] 专门用于生成绘图代码的模型
 MODEL_VISUAL = "gemini-3-pro-image-preview" 
@@ -1077,17 +1077,16 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                                             "query": f"{angle['title']} - {user_query}"
                                         })
 
-                                    # [中文提示词] 数据解读
-                                    prompt_mini = f"用一句话解读以下数据 (中文): \n{res_df.to_string()}"
-                                    resp_mini = safe_generate(client, MODEL_FAST, prompt_mini)
-                                    explanation = resp_mini.text
-                                    st.markdown(f'<div class="mini-insight">>> {explanation}</div>', unsafe_allow_html=True)
-                                    angles_data.append({"title": angle['title'], "explanation": explanation})
-                                    
-                                    # [修改] 移除自动绘图，依赖历史记录中的按钮
-                                    
+                                        # [中文提示词] 数据解读
+                                        prompt_mini = f"用一句话解读以下数据 (中文): \n{res_df.to_string()}"
+                                        resp_mini = safe_generate(client, MODEL_FAST, prompt_mini)
+                                        explanation = resp_mini.text
+                                        st.markdown(f'<div class="mini-insight">>> {explanation}</div>', unsafe_allow_html=True)
+                                        angles_data.append({"title": angle['title'], "explanation": explanation})
+                                        
                                     else:
                                         st.warning(f"{angle['title']} 暂无数据")
+
                             except Exception as e:
                                 st.error(f"分析错误: {e}")
 
