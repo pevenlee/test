@@ -27,14 +27,14 @@ st.set_page_config(
 )
 
 # --- 模型配置 ---
-MODEL_FAST = "gemini-2.0-flash"        
+MODEL_FAST = "gemini-3-pro-flash-preview"         
 MODEL_SMART = "gemini-3-pro-preview"
-# [新增] 专门用于生成绘图代码的模型 (建议使用Flash以获得极速响应)
+# [新增] 专门用于生成绘图代码的模型
 MODEL_VISUAL = "gemini-3-pro-image-preview" 
 
 # --- 常量定义 ---
 JOIN_KEY = "药品索引"
-FILE_FACT = "fact.csv"        
+FILE_FACT = "fact.csv"         
 FILE_DIM = "ipmdata.xlsx"
 LOGO_FILE = "logo.png"
 
@@ -506,64 +506,65 @@ def get_avatar(role):
     else:
         return BOT_AVATAR if os.path.exists(BOT_AVATAR) else None
 
-# ================= [新增] 自动可视化函数 =================
+# ================= [修改] 按需全量可视化函数 =================
 
-def render_chart_from_data(df, query):
+def generate_chart_code(df, query):
     """
-    根据数据框和查询自动生成 Plotly 图表
+    根据完整数据框和查询生成 Plotly 图表代码并执行
     """
     if df is None or df.empty or len(df) < 2:
-        return # 数据太少不绘图
+        return None
     
-    with st.status("正在绘制图表...", expanded=False) as status:
-        try:
-            # 简化数据预览，防止 token 溢出
-            data_preview = df.head(20).to_csv(index=False)
+    # 将全量数据转为 CSV 字符串，不截断
+    try:
+        data_csv = df.to_csv(index=False)
+    except Exception as e:
+        st.error(f"数据转换失败: {e}")
+        return None
+
+    prompt_visual = f"""
+    你是一位 Python 数据可视化专家。
+    
+    【任务】
+    根据以下完整数据和用户查询，编写使用 `plotly.express` (导入为 px) 的代码来生成一个交互式图表。
+    
+    【数据全量 (CSV)】
+    {data_csv}
+    
+    【用户查询/上下文】
+    "{query}"
+    
+    【要求】
+    1. 代码必须将 `plotly.graph_objects.Figure` 对象赋值给变量 `fig`。
+    2. **不要**使用 `fig.show()` 或 `st.plotly_chart()`，只定义 `fig` 变量。
+    3. 根据数据类型智能选择图表：
+       - 对比类 -> 条形图 (px.bar)
+       - 趋势类 -> 折线图 (px.line)
+       - 占比类 -> 饼图/环形图 (px.pie)
+    4. 设置图表模板为 'plotly_dark' 以适配黑色背景。
+    5. 返回纯 Python 代码，不要包含 Markdown 标记（如 ```python）。
+    
+    【特别注意】
+    数据已包含所有行，请完整可视化，不要自行截断。
+    """
+    
+    try:
+        # 使用视觉模型（或高速模型）生成代码
+        resp = safe_generate(client, MODEL_VISUAL, prompt_visual)
+        if "Error" in resp.text:
+            return None
             
-            prompt_visual = f"""
-            你是一位 Python 数据可视化专家。
-            
-            【任务】
-            根据以下数据和用户查询，编写使用 `plotly.express` (导入为 px) 的代码来生成一个交互式图表。
-            
-            【数据预览 (CSV)】
-            {data_preview}
-            
-            【用户查询】
-            "{query}"
-            
-            【要求】
-            1. 代码必须将 `plotly.graph_objects.Figure` 对象赋值给变量 `fig`。
-            2. **不要**使用 `fig.show()` 或 `st.plotly_chart()`，只定义 `fig` 变量。
-            3. 根据数据类型智能选择图表：
-               - 对比类 -> 条形图 (px.bar)
-               - 趋势类 -> 折线图 (px.line)
-               - 占比类 -> 饼图/环形图 (px.pie)
-            4. 设置图表模板为 'plotly_dark' 以适配黑色背景。
-            5. 返回纯 Python 代码，不要包含 Markdown 标记（如 ```python）。
-            
-            【特别注意】
-            如果数据列包含 "份额" 或 "%"，请确保 hover_data 显示格式正确。
-            """
-            
-            # 使用视觉模型（或高速模型）生成代码
-            resp = safe_generate(client, MODEL_VISUAL, prompt_visual)
-            code_str = resp.text.replace("```python", "").replace("```", "").strip()
-            
-            # 执行绘图代码
-            local_ctx = {"pd": pd, "px": px, "df": df}
-            exec(code_str, local_ctx)
-            
-            fig = local_ctx.get("fig")
-            if fig:
-                st.plotly_chart(fig, use_container_width=True)
-                st.session_state.messages.append({"role": "assistant", "type": "chart", "content": fig})
-                status.update(label="图表绘制完成", state="complete")
-            else:
-                status.update(label="未能生成图表对象", state="error")
-                
-        except Exception as e:
-            status.update(label=f"绘图失败: {str(e)}", state="error")
+        code_str = resp.text.replace("```python", "").replace("```", "").strip()
+        
+        # 执行绘图代码
+        local_ctx = {"pd": pd, "px": px, "df": df}
+        exec(code_str, local_ctx)
+        
+        fig = local_ctx.get("fig")
+        return fig
+    except Exception as e:
+        st.error(f"图表生成失败: {str(e)}")
+        return None
 
 # ================= 4. 页面渲染 =================
 
@@ -694,8 +695,8 @@ st.markdown(f"""
 
 if "messages" not in st.session_state: st.session_state.messages = []
 
-# --- Chat History ---
-for msg in st.session_state.messages:
+# --- Chat History & Manual Chart Trigger ---
+for idx, msg in enumerate(st.session_state.messages):
     avatar_file = get_avatar(msg["role"])
     with st.chat_message(msg["role"], avatar=avatar_file):
         if msg["type"] == "text": 
@@ -704,6 +705,21 @@ for msg in st.session_state.messages:
             st.markdown(f"<span class='msg-prefix {role_class}'>{prefix}</span>{msg['content']}", unsafe_allow_html=True)
         elif msg["type"] == "df": 
             st.dataframe(msg["content"], use_container_width=True)
+            
+            # [新增] 仅在数据表消息下方显示“制作图表”按钮
+            # 使用唯一 key 避免冲突
+            if st.button("📊 制作图表", key=f"btn_chart_{idx}"):
+                with st.spinner("正在基于全量数据生成图表..."):
+                    # 获取该数据表对应的查询上下文
+                    chart_query = msg.get("query", "根据数据绘制图表")
+                    fig = generate_chart_code(msg["content"], chart_query)
+                    
+                    if fig:
+                        st.session_state.messages.append({"role": "assistant", "type": "chart", "content": fig})
+                        st.rerun() # 刷新页面以显示新图表
+                    else:
+                        st.error("图表生成失败，请重试。")
+                        
         elif msg["type"] == "chart":
             st.plotly_chart(msg["content"], use_container_width=True)
         elif msg["type"] == "error":
@@ -866,12 +882,16 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                         if not safe_check_empty(res_df):
                             formatted_df = format_display_df(res_df)
                             st.dataframe(formatted_df, use_container_width=True)
-                            st.session_state.messages.append({"role": "assistant", "type": "df", "content": formatted_df})
                             
-                            # ================= [新增] 自动绘图触发 =================
-                            render_chart_from_data(res_df, user_query)
-                            # ======================================================
-
+                            # [修改] 不自动绘图，而是保存数据和Query到 session_state
+                            # 界面上通过历史记录循环中的 st.button 触发绘图
+                            st.session_state.messages.append({
+                                "role": "assistant", 
+                                "type": "df", 
+                                "content": formatted_df, 
+                                "query": user_query # 保存上下文以便绘图使用
+                            })
+                            
                             # ==========================================
                             # [新增功能 START] 1. Flash 快速总结表格
                             # ==========================================
@@ -943,7 +963,12 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                                 res_fallback = safe_exec_code(fallback_code, exec_ctx)
                                 if not safe_check_empty(normalize_result(res_fallback)):
                                     st.dataframe(res_fallback)
-                                    st.session_state.messages.append({"role": "assistant", "type": "df", "content": res_fallback})
+                                    st.session_state.messages.append({
+                                        "role": "assistant", 
+                                        "type": "df", 
+                                        "content": res_fallback,
+                                        "query": user_query
+                                    })
                                 else:
                                     st.markdown(f'<div class="custom-error">未找到相关数据</div>', unsafe_allow_html=True)
                             except: pass
@@ -1024,7 +1049,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                                 # 【核心修复】: 传入同一个 shared_ctx，而不是每次新建 local_ctx
                                 res_raw = safe_exec_code(angle['code'], shared_ctx)
                                 
-                                # 处理结果显示逻辑 (保持不变)
+                                # 处理结果显示逻辑
                                 if isinstance(res_raw, dict) and any(isinstance(v, (pd.DataFrame, pd.Series)) for v in res_raw.values()):
                                     res_df = pd.DataFrame() 
                                     for k, v in res_raw.items():
@@ -1032,26 +1057,35 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                                         sub_df = normalize_result(v)
                                         st.dataframe(format_display_df(sub_df), use_container_width=True)
                                         res_df = sub_df 
-                                        st.session_state.messages.append({"role": "assistant", "type": "df", "content": sub_df})
+                                        # 保存到历史，带上 query 方便后续绘图
+                                        st.session_state.messages.append({
+                                            "role": "assistant", 
+                                            "type": "df", 
+                                            "content": sub_df,
+                                            "query": f"{angle['title']} - {user_query}"
+                                        })
                                         
-                                        # [新增] 深度分析也触发绘图
-                                        render_chart_from_data(sub_df, angle['title'])
                                 else:
                                     res_df = normalize_result(res_raw)
                                     if not safe_check_empty(res_df):
                                         formatted_df = format_display_df(res_df)
                                         st.dataframe(formatted_df, use_container_width=True)
-                                        st.session_state.messages.append({"role": "assistant", "type": "df", "content": formatted_df})
-                                        
-                                        # [新增] 深度分析也触发绘图
-                                        render_chart_from_data(res_df, angle['title'])
+                                        st.session_state.messages.append({
+                                            "role": "assistant", 
+                                            "type": "df", 
+                                            "content": formatted_df,
+                                            "query": f"{angle['title']} - {user_query}"
+                                        })
 
-                                        # [中文提示词] 数据解读
-                                        prompt_mini = f"用一句话解读以下数据 (中文): \n{res_df.to_string()}"
-                                        resp_mini = safe_generate(client, MODEL_FAST, prompt_mini)
-                                        explanation = resp_mini.text
-                                        st.markdown(f'<div class="mini-insight">>> {explanation}</div>', unsafe_allow_html=True)
-                                        angles_data.append({"title": angle['title'], "explanation": explanation})
+                                    # [中文提示词] 数据解读
+                                    prompt_mini = f"用一句话解读以下数据 (中文): \n{res_df.to_string()}"
+                                    resp_mini = safe_generate(client, MODEL_FAST, prompt_mini)
+                                    explanation = resp_mini.text
+                                    st.markdown(f'<div class="mini-insight">>> {explanation}</div>', unsafe_allow_html=True)
+                                    angles_data.append({"title": angle['title'], "explanation": explanation})
+                                    
+                                    # [修改] 移除自动绘图，依赖历史记录中的按钮
+                                    
                                     else:
                                         st.warning(f"{angle['title']} 暂无数据")
                             except Exception as e:
