@@ -898,7 +898,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                             })
                             
                             # ================= 🔴 即时显示按钮 🔴 =================
-                            if st.button("📊 制作图表", key=f"btn_chart_{len(st.session_state.messages)-1}"):
+                            if st.button("▶︎ 制作图表", key=f"btn_chart_{len(st.session_state.messages)-1}"):
                                 st.rerun()
                             # =======================================================
                             
@@ -980,7 +980,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                                         "query": user_query
                                     })
                                     # ================= 🔴 即时显示按钮 🔴 =================
-                                    if st.button("📊 制作图表", key=f"btn_chart_{len(st.session_state.messages)-1}"):
+                                    if st.button("▶︎ 制作图表", key=f"btn_chart_{len(st.session_state.messages)-1}"):
                                         st.rerun()
                                     # =======================================================
                                 else:
@@ -1081,7 +1081,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                                             "query": f"{angle['title']} - {user_query}"
                                         })
                                         # ================= 🔴 即时显示按钮 🔴 =================
-                                        if st.button("📊 制作图表", key=f"btn_chart_{len(st.session_state.messages)-1}"):
+                                        if st.button("▶︎ 制作图表", key=f"btn_chart_{len(st.session_state.messages)-1}"):
                                             st.rerun()
                                         # =======================================================
                                         
@@ -1097,7 +1097,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                                             "query": f"{angle['title']} - {user_query}"
                                         })
                                         # ================= 🔴 即时显示按钮 🔴 =================
-                                        if st.button("📊 制作图表", key=f"btn_chart_{len(st.session_state.messages)-1}"):
+                                        if st.button("▶︎ 制作图表", key=f"btn_chart_{len(st.session_state.messages)-1}"):
                                             st.rerun()
                                         # =======================================================
 
