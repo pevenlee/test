@@ -27,7 +27,7 @@ st.set_page_config(
 )
 
 # --- 模型配置 ---
-MODEL_FAST = "gemini-3-pro-flash-preview"          
+MODEL_FAST = "gemini-2.0-flash"          
 MODEL_SMART = "gemini-3-pro-preview"
 # [新增] 专门用于生成绘图代码的模型
 MODEL_VISUAL = "gemini-3-pro-image-preview" 
