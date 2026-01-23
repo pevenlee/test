@@ -710,7 +710,7 @@ for idx, msg in enumerate(st.session_state.messages):
             
             # [新增] 仅在数据表消息下方显示“制作图表”按钮
             # 使用唯一 key 避免冲突
-            if st.button("📊 制作图表", key=f"btn_chart_{idx}"):
+            if st.button("▶︎ 制作图表", key=f"btn_chart_{idx}"):
                 with st.spinner("正在基于全量数据生成图表..."):
                     # 获取该数据表对应的查询上下文
                     chart_query = msg.get("query", "根据数据绘制图表")
