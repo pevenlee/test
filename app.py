@@ -27,10 +27,10 @@ st.set_page_config(
 )
 
 # --- 模型配置 ---
-MODEL_FAST = "gemini-3-flash-preview"          
-MODEL_SMART = "gemini-3-pro-preview"
+MODEL_FAST = "gemini-2.0-flash-exp"          
+MODEL_SMART = "gemini-2.0-flash-thinking-exp-1219"
 # [新增] 专门用于生成绘图代码的模型
-MODEL_VISUAL = "gemini-3-pro-image-preview" 
+MODEL_VISUAL = "gemini-2.0-flash-exp" 
 
 # --- 常量定义 ---
 JOIN_KEY = "药品索引"
@@ -82,18 +82,26 @@ def inject_custom_css():
         /* 按钮样式 */
         .stButton button {
             border-radius: var(--radius-md) !important;
-            text-align: left !important;
-            justify-content: flex-start !important;
-            padding-left: 15px !important;
+            text-align: center !important;
+            justify-content: center !important;
             border: 1px solid #333 !important;
             background: #111 !important;
             color: #CCC !important;
             transition: all 0.2s ease;
+            height: 42px !important; /* 强制高度以便与输入框对齐 */
         }
         .stButton button:hover {
             border-color: #666 !important;
             color: #FFF !important;
             background: #222 !important;
+        }
+
+        /* 输入框样式修正 */
+        div[data-testid="stTextInput"] input {
+            height: 42px !important;
+            background: #050505 !important;
+            border: 1px solid #333 !important;
+            color: #FFF !important;
         }
 
         /* === 布局核心修正 === */
@@ -145,7 +153,7 @@ def inject_custom_css():
             background: transparent !important;
         }
         
-        /* === 5. [新增] 侧边栏数据字典样式 (Chips) === */
+        /* === 5. 侧边栏数据字典样式 (Chips) === */
         .dict-category {
             font-size: 13px;
             font-weight: 700;
@@ -742,19 +750,39 @@ for idx, msg in enumerate(st.session_state.messages):
         elif msg["type"] == "df": 
             st.dataframe(msg["content"], use_container_width=True)
             
-            # [新增] 仅在数据表消息下方显示“制作图表”按钮
-            # 使用唯一 key 避免冲突
-            if st.button("▶︎ 制作图表", key=f"btn_chart_{idx}"):
+            # --- [修改开始] 增加绘图指令输入框和按钮 ---
+            c_input, c_btn = st.columns([3, 1], vertical_alignment="bottom")
+            
+            with c_input:
+                # 获取该位置的输入内容 (如果之前输入过，Streamlit 会保持状态)
+                chart_req = st.text_input(
+                    "绘图指令", 
+                    placeholder="可选: 输入绘图要求(如: 用折线图, 红色)...", 
+                    key=f"chart_inst_{idx}", 
+                    label_visibility="collapsed"
+                )
+            
+            with c_btn:
+                # 按钮点击状态
+                is_clicked = st.button("▶︎ 制作图表", key=f"btn_chart_{idx}", use_container_width=True)
+
+            if is_clicked:
                 with st.spinner("正在基于全量数据生成图表..."):
-                    # 获取该数据表对应的查询上下文
-                    chart_query = msg.get("query", "根据数据绘制图表")
-                    fig = generate_chart_code(msg["content"], chart_query)
+                    # 获取该数据表对应的原始查询
+                    base_query = msg.get("query", "根据数据绘制图表")
+                    
+                    # 组合新的查询：如果用户输入了指令，则追加到 prompt 中
+                    final_chart_query = f"{base_query}。用户额外绘图指令：{chart_req}" if chart_req else base_query
+                    
+                    # 传入组合后的 Query
+                    fig = generate_chart_code(msg["content"], final_chart_query)
                     
                     if fig:
                         st.session_state.messages.append({"role": "assistant", "type": "chart", "content": fig})
                         st.rerun() # 刷新页面以显示新图表
                     else:
                         st.error("图表生成失败，请重试。")
+            # --- [修改结束] ---
                         
         elif msg["type"] == "chart":
             st.plotly_chart(msg["content"], use_container_width=True)
@@ -932,8 +960,21 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                             })
                             
                             # ================= 🔴 即时显示按钮 🔴 =================
-                            if st.button("▶︎ 制作图表", key=f"btn_chart_{len(st.session_state.messages)-1}"):
-                                st.rerun()
+                            # [修改] 即时显示也加上输入框，保持一致性
+                            current_key_suffix = len(st.session_state.messages)-1
+                            ic_input, ic_btn = st.columns([3, 1], vertical_alignment="bottom")
+                            with ic_input:
+                                # 这个 Key 必须和 History Loop 里的对应 Key 一致 (idx = current_key_suffix)
+                                # 这样用户输入的内容在 Rerun 后会被 History Loop 读取到
+                                st.text_input(
+                                    "即时绘图指令", 
+                                    placeholder="可选: 指定图表类型或颜色...", 
+                                    key=f"chart_inst_{current_key_suffix}",
+                                    label_visibility="collapsed"
+                                )
+                            with ic_btn:
+                                if st.button("▶︎ 制作图表", key=f"btn_chart_{current_key_suffix}", use_container_width=True):
+                                    st.rerun()
                             # =======================================================
                             
                             # ==========================================
@@ -1014,8 +1055,18 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                                         "query": user_query
                                     })
                                     # ================= 🔴 即时显示按钮 🔴 =================
-                                    if st.button("▶︎ 制作图表", key=f"btn_chart_{len(st.session_state.messages)-1}"):
-                                        st.rerun()
+                                    current_key_suffix = len(st.session_state.messages)-1
+                                    ic_input, ic_btn = st.columns([3, 1], vertical_alignment="bottom")
+                                    with ic_input:
+                                        st.text_input(
+                                            "即时绘图指令", 
+                                            placeholder="可选: 指定图表类型或颜色...", 
+                                            key=f"chart_inst_{current_key_suffix}",
+                                            label_visibility="collapsed"
+                                        )
+                                    with ic_btn:
+                                        if st.button("▶︎ 制作图表", key=f"btn_chart_{current_key_suffix}", use_container_width=True):
+                                            st.rerun()
                                     # =======================================================
                                 else:
                                     st.markdown(f'<div class="custom-error">未找到相关数据</div>', unsafe_allow_html=True)
@@ -1115,8 +1166,18 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                                             "query": f"{angle['title']} - {user_query}"
                                         })
                                         # ================= 🔴 即时显示按钮 🔴 =================
-                                        if st.button("▶︎ 制作图表", key=f"btn_chart_{len(st.session_state.messages)-1}"):
-                                            st.rerun()
+                                        current_key_suffix = len(st.session_state.messages)-1
+                                        ic_input, ic_btn = st.columns([3, 1], vertical_alignment="bottom")
+                                        with ic_input:
+                                            st.text_input(
+                                                "即时绘图指令", 
+                                                placeholder="可选: 指定图表类型或颜色...", 
+                                                key=f"chart_inst_{current_key_suffix}",
+                                                label_visibility="collapsed"
+                                            )
+                                        with ic_btn:
+                                            if st.button("▶︎ 制作图表", key=f"btn_chart_{current_key_suffix}", use_container_width=True):
+                                                st.rerun()
                                         # =======================================================
                                         
                                 else:
@@ -1131,8 +1192,18 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                                             "query": f"{angle['title']} - {user_query}"
                                         })
                                         # ================= 🔴 即时显示按钮 🔴 =================
-                                        if st.button("▶︎ 制作图表", key=f"btn_chart_{len(st.session_state.messages)-1}"):
-                                            st.rerun()
+                                        current_key_suffix = len(st.session_state.messages)-1
+                                        ic_input, ic_btn = st.columns([3, 1], vertical_alignment="bottom")
+                                        with ic_input:
+                                            st.text_input(
+                                                "即时绘图指令", 
+                                                placeholder="可选: 指定图表类型或颜色...", 
+                                                key=f"chart_inst_{current_key_suffix}",
+                                                label_visibility="collapsed"
+                                            )
+                                        with ic_btn:
+                                            if st.button("▶︎ 制作图表", key=f"btn_chart_{current_key_suffix}", use_container_width=True):
+                                                st.rerun()
                                         # =======================================================
 
                                         # [中文提示词] 数据解读
